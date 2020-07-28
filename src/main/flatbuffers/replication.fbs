@@ -1,0 +1,28 @@
+namespace dev.north.fortyone.besu.replication.fb;
+
+enum TransactionEventType : byte {
+  PUT,
+  REMOVE
+}
+
+table TransactionEvent {
+  type: TransactionEventType;
+  key: [byte];
+  value: [byte];
+}
+
+table Transaction {
+  events: [TransactionEvent];
+}
+
+enum ReplicationEventType : byte {
+  CLEAR_ALL,
+  TRANSACTION
+}
+
+table ReplicationEvent {
+  type: ReplicationEventType;
+  factoryName: string;
+  segmentId: [byte];
+  transaction: Transaction;
+}
