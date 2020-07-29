@@ -113,7 +113,6 @@ class DefaultReplicationManager(
     else
       startupBuffer = startupBuffer + Triple(factoryName, segment, events)
 
-
   @ExperimentalTime
   @InternalCoroutinesApi
   override suspend fun run() {
@@ -130,7 +129,6 @@ class DefaultReplicationManager(
 
           launch { transactionLog.write(entries) }.join()
           replicationBuffer.remove(entries.map { it.first })
-
         }
       }
 

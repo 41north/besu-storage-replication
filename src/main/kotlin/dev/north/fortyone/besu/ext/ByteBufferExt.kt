@@ -21,4 +21,3 @@ import java.nio.ByteBuffer
 fun ByteBuffer.toByteArray(): ByteArray =
   ByteArray(this.remaining())
     .also { bytes -> this.get(bytes) }
-

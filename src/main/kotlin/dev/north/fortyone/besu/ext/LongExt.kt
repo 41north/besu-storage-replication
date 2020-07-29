@@ -23,4 +23,3 @@ fun Long.toBytes(): ByteArray {
   buffer.putLong(this)
   return buffer.array()
 }
-

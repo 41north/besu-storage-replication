@@ -28,13 +28,13 @@ enum class ReplicationSegmentIdentifier(
   private val id: ByteArray
 ) : SegmentIdentifier {
 
-  DEFAULT( ByteArray(1).apply { this[0] = 0x1 });
+  DEFAULT(ByteArray(1).apply { this[0] = 0x1 });
 
   override fun getName(): String = name.toLowerCase()
   override fun getId(): ByteArray = id
 }
 
-class InterceptingKeyValueStorageFactory (
+class InterceptingKeyValueStorageFactory(
   private val delegate: KeyValueStorageFactory,
   private val listener: StorageEventsListener
 ) : KeyValueStorageFactory {

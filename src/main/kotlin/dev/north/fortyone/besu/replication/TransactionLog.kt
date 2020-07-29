@@ -36,9 +36,7 @@ enum class TransactionLogProvider {
         KAFKA -> KafkaTransactionLog(command)
       }
     }
-
   }
-
 }
 
 interface TransactionLog : Closeable {

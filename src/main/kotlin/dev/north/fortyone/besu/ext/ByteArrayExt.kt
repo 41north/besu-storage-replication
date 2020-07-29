@@ -22,10 +22,9 @@ import java.nio.ByteBuffer
 fun ByteArray.toLong(): Long {
   val buffer: ByteBuffer = ByteBuffer.allocate(java.lang.Long.BYTES)
   buffer.put(this)
-  buffer.flip() //need flip
+  buffer.flip() // need flip
   return buffer.getLong()
 }
 
 fun ByteArray.toReplicationEvent(): ReplicationEvent =
   ReplicationEvent.getRootAsReplicationEvent(ByteBuffer.wrap(this))
-

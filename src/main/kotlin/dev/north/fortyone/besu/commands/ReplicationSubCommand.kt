@@ -16,31 +16,10 @@
 
 package dev.north.fortyone.besu.commands
 
-import dev.north.fortyone.besu.ext.reflektField
-import dev.north.fortyone.besu.ext.toByteArray
-import dev.north.fortyone.besu.ext.toReplicationEvent
-import dev.north.fortyone.besu.replication.KafkaTransactionLog
-import dev.north.fortyone.besu.replication.fb.ReplicationEventType
-import dev.north.fortyone.besu.replication.fb.TransactionEventType
-import kotlinx.coroutines.runBlocking
-import org.hyperledger.besu.cli.BesuCommand
-import org.hyperledger.besu.controller.BesuController
-import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier
-import org.hyperledger.besu.metrics.ObservableMetricsSystem
-import org.hyperledger.besu.plugin.services.BesuConfiguration
-import org.hyperledger.besu.plugin.services.MetricsSystem
-import org.hyperledger.besu.plugin.services.StorageService
-import org.hyperledger.besu.plugin.services.storage.KeyValueStorage
-import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier
-import org.hyperledger.besu.services.BesuConfigurationImpl
-import org.hyperledger.besu.services.BesuPluginContextImpl
 import picocli.CommandLine.Command
 import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.ParentCommand
 import picocli.CommandLine.Spec
-import java.nio.file.Path
-import java.time.Duration
-import java.util.function.Supplier
 
 @Command(
   name = "replication"

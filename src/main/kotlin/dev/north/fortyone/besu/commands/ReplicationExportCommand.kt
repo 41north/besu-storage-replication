@@ -84,21 +84,16 @@ class ReplicationExportCommand : Runnable {
 
       val flushBatch = { batch: List<ByteArray> ->
             batch.map {
-
             }
       }
 
       val batchSize = 1024
       var batch = mutableListOf<ByteArray>()
 
-      while(iterator.tryAdvance { bytes -> batch.add(bytes)}) {
+      while (iterator.tryAdvance { bytes -> batch.add(bytes) }) {
         if (batch.size == batchSize) {
-
         }
-
-
       }
-
     }
   }
 }

@@ -43,7 +43,6 @@ class BesuCommandMixin {
   )
   var txLogProvider: String = "kafka"
 
-
   // kafka
 
   @CommandLine.Option(
@@ -80,5 +79,4 @@ class BesuCommandMixin {
 
   @Spec
   private lateinit var spec: CommandSpec
-
 }

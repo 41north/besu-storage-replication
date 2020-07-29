@@ -26,14 +26,11 @@ import dev.north.fortyone.besu.services.DefaultReplicationManager
 import dev.north.fortyone.besu.services.ReplicationManager
 import dev.north.fortyone.besu.storage.InterceptingKeyValueStorageFactory
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.BesuContext
 import org.hyperledger.besu.plugin.BesuPlugin
@@ -122,7 +119,6 @@ class ReplicationPlugin(
       } finally {
         replicationManager.close()
       }
-
     }
   }
 
