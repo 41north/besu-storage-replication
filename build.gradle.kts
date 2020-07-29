@@ -118,7 +118,6 @@ flatbuffers {
   extraFlatcArgs.set("flatc --java -o /output/ -I /input --gen-all /input/replication.fbs")
 }
 
-
 val distZip: Zip by project.tasks
 distZip.apply {
   dependsOn(":plugin:build")
@@ -132,7 +131,6 @@ distTar.apply {
   compression = Compression.GZIP
   archiveExtension.set("tar.gz")
 }
-
 
 distributions {
   main {
