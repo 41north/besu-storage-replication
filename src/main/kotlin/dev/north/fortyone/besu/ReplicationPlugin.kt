@@ -25,12 +25,7 @@ import dev.north.fortyone.besu.replication.TransactionLogProvider
 import dev.north.fortyone.besu.services.DefaultReplicationManager
 import dev.north.fortyone.besu.services.ReplicationManager
 import dev.north.fortyone.besu.storage.InterceptingKeyValueStorageFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.BesuContext
 import org.hyperledger.besu.plugin.BesuPlugin
@@ -43,84 +38,91 @@ class ReplicationPlugin(
   companion object {
     const val name = "replication"
     const val cliPrefix = "--plugin-$name-"
-  }
 
-  private val log = LogManager.getLogger(ReplicationPlugin::class.java)
+    private val log = LogManager.getLogger(ReplicationPlugin::class.java)
+  }
 
   private val command = BesuCommandMixin()
 
   private lateinit var context: BesuContext
   private lateinit var replicationJob: Job
 
-  override fun register(context: BesuContext) {
+  override fun register(context: BesuContext) =
+    context.run {
+      // capture reference to context
+      this@ReplicationPlugin.context = context
 
-    this.context = context
+      registerCli(this)
+      registerStorage(this)
+    }
 
-    this.registerCli(context)
-    this.registerStorage(context)
-  }
-
-  private fun registerCli(context: BesuContext) {
-
+  private fun registerCli(context: BesuContext) =
     // register our cli options and sub commands
+    context.run {
+      cliOptions()
+        .addPicoCLIOptions(ReplicationPlugin.name, command)
+    }
 
-    context
-      .cliOptions()
-      .addPicoCLIOptions(ReplicationPlugin.name, command)
-  }
-
-  private fun registerStorage(context: BesuContext) {
-
-    // register the replication manager service
-
-    val replicationManager = TransactionLogProvider
-      .instanceFor(command)
-      .let { txLog -> DefaultReplicationManager(txLog) }
-
+  private fun registerStorage(context: BesuContext) =
     context.asPluginContext()
-      .addService(ReplicationManager::class.java, replicationManager)
+      .run {
 
-    // register the intercepting storage factory, wrapping rocksdb
-    // TODO privacy storage?
+        // register the replication manager service
 
-    val storageService = context.storageService()
+        val replicationManager = TransactionLogProvider
+          .instanceFor(command)
+          .let { txLog -> DefaultReplicationManager(txLog) }
+          .also { replicationManager ->
+            addService(ReplicationManager::class.java, replicationManager)
+          }
 
-    val rocksDbFactory = storageService
-      .getByName("rocksdb")
-      .orElseThrow { IllegalStateException("RocksDB storage factory not found") }
+        // register the intercepting storage factory, wrapping rocksdb
+        // TODO privacy storage?
 
-    val interceptingStorageFactory = InterceptingKeyValueStorageFactory(
-      rocksDbFactory, replicationManager
-    )
+        storageService()
+          .run {
 
-    storageService.registerKeyValueStorage(interceptingStorageFactory)
-  }
+            val rocksDbFactory = getByName("rocksdb")
+              .orElseThrow { IllegalStateException("RocksDB storage factory not found") }
+
+            registerKeyValueStorage(
+              InterceptingKeyValueStorageFactory(
+                rocksDbFactory, replicationManager
+              )
+            )
+          }
+
+      }
 
   @Suppress("ThrowableNotThrown")
-  override fun start() {
+  override fun start() =
+    command
+      .takeIf { it.replicationEnabled }
+      .run {
 
-    if (!command.replicationEnabled) return
+        context.run {
 
-    log.info("Initialising replication manager")
+          log.info("Initialising replication manager")
+          replicationManager().initialise(context)
 
-    val replicationManager = context
-      .replicationManager()
-      .also { it.initialise(context) }
+          log.info("Starting replication thread")
 
-    log.info("Starting replication thread")
+          replicationJob = launch {
 
-    replicationJob = launch {
+            try {
+              replicationManager().run()
+            } catch (ex: Exception) {
+              // TODO improve
+              ex.printStackTrace()
+            } finally {
+              withContext(NonCancellable) {
+                replicationManager().close()
+              }
+            }
+          }
+        }
 
-      try {
-        replicationManager.run()
-      } catch (ex: Exception) {
-        // TODO improve
-        ex.printStackTrace()
-      } finally {
-        replicationManager.close()
       }
-    }
-  }
 
   override fun stop() {
     if (!command.replicationEnabled) return

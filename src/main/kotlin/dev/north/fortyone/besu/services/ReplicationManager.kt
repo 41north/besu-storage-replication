@@ -48,9 +48,7 @@ interface StorageEventsListener {
 }
 
 interface ReplicationManager : StorageEventsListener, Closeable {
-
   fun initialise(context: BesuContext)
-
   suspend fun run()
 }
 
@@ -68,44 +66,45 @@ class DefaultReplicationManager(
   private var initialised = false
 
   @Suppress("ThrowableNotThrown")
-  override fun initialise(context: BesuContext) {
+  override fun initialise(context: BesuContext) =
+    with(context) {
 
-    val rocksdbStorageFactory = context
-      .storageService()
-      .getByName("rocksdb")
-      .orElseThrow { IllegalStateException("Could not find rocksdb storage factory") }
+      val rocksdbStorageFactory = storageService()
+        .getByName("rocksdb")
+        .orElseThrow { IllegalStateException("Could not find rocksdb storage factory") }
 
-    val besuConfig = context.besuConfiguration()
+      val replicationBesuConfig = object : BesuConfiguration {
+        override fun getStoragePath(): Path =
+          besuConfiguration().storagePath.resolve("replication")
 
-    val replicationBesuConfig = object : BesuConfiguration {
-      override fun getStoragePath(): Path =
-        besuConfig.storagePath.resolve("replication")
-
-      override fun getDataPath(): Path =
-        besuConfig.dataPath.resolve("replication")
-    }
-
-    val replicationStorage = rocksdbStorageFactory.create(
-      ReplicationSegmentIdentifier.DEFAULT,
-      replicationBesuConfig,
-      context.metricsSystem()
-    )
-
-    replicationBuffer = ReplicationBuffer(replicationStorage)
-
-    // drain the startup buffer
-
-    startupBuffer
-      .forEach { (factoryName, segment, events) ->
-        replicationBuffer.onEvents(factoryName, segment, events)
+        override fun getDataPath(): Path =
+          besuConfiguration().dataPath.resolve("replication")
       }
 
-    startupBuffer = emptyList()
+      val replicationStorage = rocksdbStorageFactory.create(
+        ReplicationSegmentIdentifier.DEFAULT,
+        replicationBesuConfig,
+        context.metricsSystem()
+      )
 
-    // mark as initialised
+      replicationBuffer = ReplicationBuffer(replicationStorage)
 
-    initialised = true
-  }
+      // drain the startup buffer
+      replicationBuffer = ReplicationBuffer(replicationStorage)
+        .apply {
+
+          startupBuffer.forEach { (factoryName, segment, events) ->
+            onEvents(factoryName, segment, events)
+          }
+
+          // clear the startup buffer
+          startupBuffer = emptyList()
+        }
+
+      // mark as initialised
+
+      initialised = true
+    }
 
   override fun onEvents(factoryName: String, segment: SegmentIdentifier, events: List<StorageEvent>) =
     if (initialised)
@@ -119,23 +118,26 @@ class DefaultReplicationManager(
 
     while (isActive) {
 
-      val entries = replicationBuffer.read(1024)
+      replicationBuffer.run {
 
-      if (entries.isNotEmpty()) {
+        val entries = read(1024)
 
-        withContext(Dispatchers.IO) {
+        if (entries.isNotEmpty()) {
 
-          // TODO error handling
-
-          launch { transactionLog.write(entries) }.join()
-          replicationBuffer.remove(entries.map { it.first })
+          withContext(Dispatchers.IO) {
+            // TODO error handling
+            launch { transactionLog.write(entries) }.join()
+            replicationBuffer.remove(entries.map { it.first })
+          }
         }
+
+        if (entries.isEmpty()) {
+          log.trace("Waiting 1 second before attempting replication")
+          delay(1.seconds)
+        }
+        
       }
 
-      if (entries.isEmpty()) {
-        log.trace("Waiting 1 second before attempting replication")
-        delay(1.seconds)
-      }
     }
   }
 

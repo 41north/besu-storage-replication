@@ -47,17 +47,11 @@ class InterceptingKeyValueStorageTransaction(
     events.add(RemoveEvent(key))
   }
 
-  override fun commit() {
-    // publish the events to the listener before committing the underlying transaction
-
-    events
-      .apply {
-        listener.onEvents(factoryName, segment, events)
-        this.clear()
-      }
-
-    delegate.commit()
-  }
+  override fun commit() =
+    with(events) {
+      listener.onEvents(factoryName, segment, this)
+      delegate.commit()
+    }
 
   override fun rollback() {
     delegate.rollback()
@@ -98,8 +92,9 @@ class InterceptingKeyValueStorage(
 
   override fun tryDelete(key: ByteArray): Boolean =
     // TODO determine scope of edge case here
-    underlyingStorage.tryDelete(key)
-      .also { deleted -> if (deleted) listener.onEvents(factoryName, segment, listOf(RemoveEvent(key))) }
+    with(underlyingStorage) {
+      tryDelete(key)
+    }.also { deleted -> if (deleted) listener.onEvents(factoryName, segment, listOf(RemoveEvent(key))) }
 
   override fun close() {
     underlyingStorage.close()
