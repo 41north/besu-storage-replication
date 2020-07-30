@@ -48,12 +48,13 @@ interface StorageEventsListener {
 }
 
 interface ReplicationManager : StorageEventsListener, Closeable {
+  val transactionLog: TransactionLog
   fun initialise(context: BesuContext)
   suspend fun run()
 }
 
 class DefaultReplicationManager(
-  private val transactionLog: TransactionLog
+  override val transactionLog: TransactionLog
 ) : ReplicationManager {
 
   private val log = LogManager.getLogger(DefaultReplicationManager::class.java)
@@ -73,17 +74,13 @@ class DefaultReplicationManager(
         .getByName("rocksdb")
         .orElseThrow { IllegalStateException("Could not find rocksdb storage factory") }
 
-      val replicationBesuConfig = object : BesuConfiguration {
-        override fun getStoragePath(): Path =
-          besuConfiguration().storagePath.resolve("replication")
-
-        override fun getDataPath(): Path =
-          besuConfiguration().dataPath.resolve("replication")
-      }
+      listOf(besuConfiguration().dataPath, besuConfiguration().storagePath)
+        .map { path -> path.toFile() }
+        .forEach { file -> file.mkdirs() }
 
       val replicationStorage = rocksdbStorageFactory.create(
         ReplicationSegmentIdentifier.DEFAULT,
-        replicationBesuConfig,
+        besuConfiguration(),
         context.metricsSystem()
       )
 
@@ -135,9 +132,8 @@ class DefaultReplicationManager(
           log.trace("Waiting 1 second before attempting replication")
           delay(1.seconds)
         }
-        
-      }
 
+      }
     }
   }
 

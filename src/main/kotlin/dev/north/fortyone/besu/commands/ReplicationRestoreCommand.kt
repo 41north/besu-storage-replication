@@ -18,6 +18,11 @@ package dev.north.fortyone.besu.commands
 
 import dev.north.fortyone.besu.ext.reflektField
 import dev.north.fortyone.besu.ext.replicationManager
+import dev.north.fortyone.besu.ext.toByteArray
+import dev.north.fortyone.besu.ext.toReplicationEvent
+import dev.north.fortyone.besu.replication.fb.ReplicationEventType
+import dev.north.fortyone.besu.replication.fb.TransactionEventType
+import kotlinx.coroutines.runBlocking
 import org.hyperledger.besu.cli.BesuCommand
 import org.hyperledger.besu.controller.BesuController
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier
@@ -27,18 +32,24 @@ import org.hyperledger.besu.plugin.services.MetricsSystem
 import org.hyperledger.besu.plugin.services.StorageService
 import org.hyperledger.besu.services.BesuConfigurationImpl
 import org.hyperledger.besu.services.BesuPluginContextImpl
+import org.slf4j.LoggerFactory
 import picocli.CommandLine.Command
 import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.ParentCommand
 import picocli.CommandLine.Spec
 import java.lang.IllegalArgumentException
 import java.nio.file.Path
+import java.time.Duration
 import java.util.function.Supplier
 
 @Command(
-  name = "replication"
+  name = "restore"
 )
-class ReplicationExportCommand : Runnable {
+class ReplicationRestoreCommand : Runnable {
+
+  companion object {
+    private val logger = LoggerFactory.getLogger(ReplicationRestoreCommand::class.java)
+  }
 
   @ParentCommand
   // cannot set this type to BesuCommand as PicoCli gets confused about the parent being the mixin
@@ -49,7 +60,7 @@ class ReplicationExportCommand : Runnable {
 
   override fun run() {
 
-    val besuCommand = parentCommand as BesuCommand
+    val besuCommand = (parentCommand as ReplicationSubCommand).parentCommand as BesuCommand
 
     val dataPath = reflektField<Path>(besuCommand, "dataPath")
     val pluginContext = reflektField<BesuPluginContextImpl>(besuCommand, "besuPluginContext")
@@ -65,6 +76,7 @@ class ReplicationExportCommand : Runnable {
     pluginContext.startPlugins()
 
     val replicationManager = pluginContext.replicationManager()
+    val transactionLog = replicationManager.transactionLog
 
     val segments = listOf(
       KeyValueSegmentIdentifier.BLOCKCHAIN,
@@ -75,25 +87,62 @@ class ReplicationExportCommand : Runnable {
       .getByName(keyValueStorageName)
       .orElseThrow { throw IllegalArgumentException("Invalid key value storage name: $keyValueStorageName") }
 
-    for (segment in segments) {
+    // delete local storage
 
-      val storage = underlyingStorageFactory.create(segment, pluginCommonConfig, metricsSystem.get())
+    val storageBySegment =
+      segments
+        .map { segment -> Pair(segment, underlyingStorageFactory.create(segment, pluginCommonConfig, metricsSystem.get())) }
+        .toMap()
+        .also { it.values.forEach{ storage -> storage.clear() }}
 
-      val keysStream = storage.streamKeys()
-      val iterator = keysStream.spliterator()
+    var entries: List<Pair<Long, ByteArray>>
+    do {
 
-      val flushBatch = { batch: List<ByteArray> ->
-            batch.map {
-            }
-      }
+      entries = runBlocking { transactionLog.read(Duration.ofSeconds(10)) }
 
-      val batchSize = 1024
-      var batch = mutableListOf<ByteArray>()
+      entries
+        .map { (_, bytes) -> bytes.toReplicationEvent() }
+        .forEach { event ->
 
-      while (iterator.tryAdvance { bytes -> batch.add(bytes) }) {
-        if (batch.size == batchSize) {
+          val segmentIdentifierBytes = event.segmentIdAsByteBuffer().toByteArray()
+
+          val segmentIdentifier = KeyValueSegmentIdentifier.values()
+            .find { it.id!!.contentEquals(segmentIdentifierBytes) }
+
+          val storage = storageBySegment[segmentIdentifier]!!
+
+          when(event.type()) {
+            ReplicationEventType.CLEAR_ALL -> storage.clear()
+
+            ReplicationEventType.TRANSACTION ->
+              storage.startTransaction().run {
+
+                for (eventIdx in 0.until(event.transaction().eventsLength())) {
+
+                  val txEvent = event.transaction().events(eventIdx)
+
+                  when(txEvent.type()) {
+                    TransactionEventType.PUT ->
+                      put(txEvent.keyAsByteBuffer().toByteArray(), txEvent.valueAsByteBuffer().toByteArray())
+
+                    TransactionEventType.REMOVE ->
+                      remove(txEvent.keyAsByteBuffer().toByteArray())
+                  }
+
+                }
+
+                commit()
+              }
+
+          }
+
         }
-      }
-    }
+
+      logger.info("Processed {} entries", entries.size)
+
+    } while (entries.isNotEmpty())
+
+    logger.info("Finished")
+
   }
 }
