@@ -18,6 +18,8 @@ package dev.north.fortyone.besu.replication
 
 import dev.north.fortyone.besu.commands.BesuCommandMixin
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -31,6 +33,7 @@ import org.apache.kafka.common.serialization.LongSerializer
 import org.apache.logging.log4j.LogManager
 import java.time.Duration
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 
 class KafkaTransactionLog(
   cliOptions: BesuCommandMixin
@@ -76,7 +79,7 @@ class KafkaTransactionLog(
       }
   }
 
-  override suspend fun write(entries: List<Pair<Long, ByteArray>>) {
+  override suspend fun write(entries: List<Pair<Long, ByteArray>>): List<Job> =
     withContext(Dispatchers.IO) {
 
       // fire off the batch
@@ -84,10 +87,9 @@ class KafkaTransactionLog(
         .map { (key, value) -> ProducerRecord(topic, key, value) }
         .map { record -> producer.send(record) }
 
-      // wait for completion
-      futures.forEach { future -> future.get() }
+      // wait for completion asynchronously
+      futures.map { future -> launch { future.get(60, TimeUnit.SECONDS) }}
     }
-  }
 
   override suspend fun read(timeout: Duration): List<Pair<Long, ByteArray>> =
     withContext(Dispatchers.IO) {

@@ -24,7 +24,7 @@ import dev.north.fortyone.besu.ext.storageService
 import dev.north.fortyone.besu.replication.TransactionLogProvider
 import dev.north.fortyone.besu.services.DefaultReplicationManager
 import dev.north.fortyone.besu.services.ReplicationManager
-import dev.north.fortyone.besu.storage.InterceptingKeyValueStorageFactory
+import dev.north.fortyone.besu.storage.ReplicatingKeyValueStorageFactory
 import kotlinx.coroutines.*
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.BesuContext
@@ -86,7 +86,7 @@ class ReplicationPlugin(
               .orElseThrow { IllegalStateException("RocksDB storage factory not found") }
 
             registerKeyValueStorage(
-              InterceptingKeyValueStorageFactory(
+              ReplicatingKeyValueStorageFactory(
                 rocksDbFactory, replicationManager
               )
             )

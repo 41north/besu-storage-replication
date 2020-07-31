@@ -26,12 +26,14 @@ import dev.north.fortyone.besu.replication.fb.TransactionEvent
 import dev.north.fortyone.besu.replication.fb.TransactionEventType
 import dev.north.fortyone.besu.services.PutEvent
 import dev.north.fortyone.besu.services.RemoveEvent
-import dev.north.fortyone.besu.services.StorageEvent
 import dev.north.fortyone.besu.services.StorageEventsListener
+import dev.north.fortyone.besu.services.StorageTransaction
+import kotlinx.coroutines.CompletableJob
+import kotlinx.coroutines.Job
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage
-import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier
 import java.io.Closeable
+import java.util.concurrent.ConcurrentHashMap
 
 class ReplicationBuffer(
   private val storage: KeyValueStorage
@@ -41,6 +43,8 @@ class ReplicationBuffer(
 
   private val readPointerKey = 1L.toBytes()
   private val writePointerKey = 2L.toBytes()
+
+  private var writeJobs = ConcurrentHashMap<Long, CompletableJob>()
 
   private fun readPointer() = storage
     .get(readPointerKey)
@@ -52,16 +56,24 @@ class ReplicationBuffer(
     .map { it.toLong() }
     .orElse(3L)
 
-  override fun onEvents(factoryName: String, segment: SegmentIdentifier, events: List<StorageEvent>) {
-    val sequenceId = writePointer()
+  override fun onTransaction(transaction: StorageTransaction): Job =
+    with(storage.startTransaction()) {
 
-    storage.startTransaction()
-      .also { tx ->
-        tx.put(sequenceId.toBytes(), serialize(factoryName, segment, events))
-        tx.put(writePointerKey, (sequenceId + 1).toBytes())
-        tx.commit()
-      }
-  }
+      val sequenceId = writePointer()
+      val nextSequenceId = sequenceId + 1
+
+      // write to buffer storage
+      put(sequenceId.toBytes(), serialize(transaction))
+      put(writePointerKey, nextSequenceId.toBytes())
+      commit()
+
+      // add a write job for indicating successful replication later
+      val job = Job()
+      writeJobs[sequenceId] = job
+
+      // return job
+      job
+    }
 
   fun read(size: Int): List<Pair<Long, ByteArray>> {
 
@@ -87,60 +99,72 @@ class ReplicationBuffer(
       }
   }
 
-  fun remove(keys: List<Long>) {
-    storage
-      .startTransaction()
-      .also { tx ->
-        keys.forEach { key -> tx.remove(key.toBytes()) }
-        tx.put(readPointerKey, keys.last().toBytes())
-        tx.commit()
-      }
-  }
+  fun markAsReplicated(keys: List<Long>): Unit =
+    with(storage.startTransaction()) {
 
-  private fun serialize(factoryName: String, segment: SegmentIdentifier, events: List<StorageEvent>): ByteArray =
-    FlatBufferBuilder()
-      .let { fb ->
-        val eventsOffset = events.map { event ->
-          when (event) {
-            is PutEvent -> Pair(
-              fb.createByteVector(event.key),
-              fb.createByteVector(event.value)
-            ).let { (keyOffset, valueOffset) ->
-              TransactionEvent.startTransactionEvent(fb)
-              TransactionEvent.addType(fb, TransactionEventType.PUT)
-              TransactionEvent.addKey(fb, keyOffset)
-              TransactionEvent.addValue(fb, valueOffset)
-              TransactionEvent.endTransactionEvent(fb)
-            }
-            is RemoveEvent -> fb
-              .createByteVector(event.key)
-              .let { keyOffset ->
-                TransactionEvent.startTransactionEvent(fb)
-                TransactionEvent.addType(fb, TransactionEventType.REMOVE)
-                TransactionEvent.addKey(fb, keyOffset)
-                TransactionEvent.endTransactionEvent(fb)
+      // remove from storage
+      keys.forEach { key -> remove(key.toBytes()) }
+      put(readPointerKey, keys.last().toBytes())
+      commit()
+
+      // mark the jobs as complete
+      keys.forEach { key ->
+
+        // it's possible after a restart that the jobs are no longer in memory so this is conditional
+        writeJobs[key]?.complete()
+
+        // remove from the map
+        writeJobs - key
+      }
+    }
+
+  private fun serialize(transaction: StorageTransaction): ByteArray =
+    with(transaction) {
+      FlatBufferBuilder()
+        .let { fb ->
+          val eventsOffset = storageEvents
+            .map { event ->
+              when (event) {
+                is PutEvent -> Pair(
+                  fb.createByteVector(event.key),
+                  fb.createByteVector(event.value)
+                ).let { (keyOffset, valueOffset) ->
+                  TransactionEvent.startTransactionEvent(fb)
+                  TransactionEvent.addType(fb, TransactionEventType.PUT)
+                  TransactionEvent.addKey(fb, keyOffset)
+                  TransactionEvent.addValue(fb, valueOffset)
+                  TransactionEvent.endTransactionEvent(fb)
+                }
+                is RemoveEvent -> fb
+                  .createByteVector(event.key)
+                  .let { keyOffset ->
+                    TransactionEvent.startTransactionEvent(fb)
+                    TransactionEvent.addType(fb, TransactionEventType.REMOVE)
+                    TransactionEvent.addKey(fb, keyOffset)
+                    TransactionEvent.endTransactionEvent(fb)
+                  }
+                else -> throw IllegalStateException()
               }
-            else -> throw IllegalStateException()
-          }
-        }.let { eventIndices -> Transaction.createEventsVector(fb, eventIndices.toIntArray()) }
+            }.let { eventIndices -> Transaction.createEventsVector(fb, eventIndices.toIntArray()) }
 
-        Transaction.startTransaction(fb)
-        Transaction.addEvents(fb, eventsOffset)
-        val txOffset = Transaction.endTransaction(fb)
+          Transaction.startTransaction(fb)
+          Transaction.addEvents(fb, eventsOffset)
+          val txOffset = Transaction.endTransaction(fb)
 
-        val factoryNameOffset = fb.createString(factoryName)
-        val segmentOffset = fb.createByteVector(segment.id)
+          val factoryNameOffset = fb.createString(factoryName)
+          val segmentOffset = fb.createByteVector(segment.id)
 
-        ReplicationEvent.startReplicationEvent(fb)
-        ReplicationEvent.addType(fb, ReplicationEventType.TRANSACTION)
-        ReplicationEvent.addFactoryName(fb, factoryNameOffset)
-        ReplicationEvent.addSegmentId(fb, segmentOffset)
-        ReplicationEvent.addTransaction(fb, txOffset)
-        val rootOffset = ReplicationEvent.endReplicationEvent(fb)
+          ReplicationEvent.startReplicationEvent(fb)
+          ReplicationEvent.addType(fb, ReplicationEventType.TRANSACTION)
+          ReplicationEvent.addFactoryName(fb, factoryNameOffset)
+          ReplicationEvent.addSegmentId(fb, segmentOffset)
+          ReplicationEvent.addTransaction(fb, txOffset)
+          val rootOffset = ReplicationEvent.endReplicationEvent(fb)
 
-        fb.finish(rootOffset)
-        fb.sizedByteArray()
-      }
+          fb.finish(rootOffset)
+          fb.sizedByteArray()
+        }
+    }
 
   override fun close() {
     storage.close()

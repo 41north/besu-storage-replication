@@ -22,18 +22,15 @@ import dev.north.fortyone.besu.ext.storageService
 import dev.north.fortyone.besu.replication.ReplicationBuffer
 import dev.north.fortyone.besu.replication.TransactionLog
 import dev.north.fortyone.besu.storage.ReplicationSegmentIdentifier
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.BesuContext
-import org.hyperledger.besu.plugin.services.BesuConfiguration
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier
 import java.io.Closeable
-import java.nio.file.Path
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
@@ -43,8 +40,14 @@ class PutEvent(val key: ByteArray, val value: ByteArray) : StorageEvent()
 class RemoveEvent(val key: ByteArray) : StorageEvent()
 class ClearEvent : StorageEvent()
 
+data class StorageTransaction(
+  val factoryName: String,
+  val segment: SegmentIdentifier,
+  val storageEvents: List<StorageEvent>
+)
+
 interface StorageEventsListener {
-  fun onEvents(factoryName: String, segment: SegmentIdentifier, events: List<StorageEvent>)
+  fun onTransaction(transaction: StorageTransaction): Job
 }
 
 interface ReplicationManager : StorageEventsListener, Closeable {
@@ -61,7 +64,7 @@ class DefaultReplicationManager(
 
   private lateinit var replicationBuffer: ReplicationBuffer
 
-  private var startupBuffer = emptyList<Triple<String, SegmentIdentifier, List<StorageEvent>>>()
+  private var startupTransactionBuffer = emptyList<Pair<StorageTransaction, CompletableJob>>()
 
   @Volatile
   private var initialised = false
@@ -90,12 +93,19 @@ class DefaultReplicationManager(
       replicationBuffer = ReplicationBuffer(replicationStorage)
         .apply {
 
-          startupBuffer.forEach { (factoryName, segment, events) ->
-            onEvents(factoryName, segment, events)
+          startupTransactionBuffer.forEach { (tx, job) ->
+            onTransaction(tx)
+              .invokeOnCompletion { exception ->
+                if (exception == null)
+                  job.complete()
+                else
+                  job.completeExceptionally(exception)
+              }
+
           }
 
           // clear the startup buffer
-          startupBuffer = emptyList()
+          startupTransactionBuffer = emptyList()
         }
 
       // mark as initialised
@@ -103,37 +113,42 @@ class DefaultReplicationManager(
       initialised = true
     }
 
-  override fun onEvents(factoryName: String, segment: SegmentIdentifier, events: List<StorageEvent>) =
+  override fun onTransaction(transaction: StorageTransaction) =
     if (initialised)
-      replicationBuffer.onEvents(factoryName, segment, events)
+      replicationBuffer.onTransaction(transaction)
     else
-      startupBuffer = startupBuffer + Triple(factoryName, segment, events)
+      Job().apply {
+        startupTransactionBuffer = startupTransactionBuffer + Pair(transaction, this)
+      }
 
   @ExperimentalTime
   @InternalCoroutinesApi
   override suspend fun run() {
 
-    while (isActive) {
+    try {
+      while (isActive) {
 
-      replicationBuffer.run {
+        replicationBuffer.run {
 
-        val entries = read(1024)
+          val entries = read(1024)
 
-        if (entries.isNotEmpty()) {
-
-          withContext(Dispatchers.IO) {
+          if (entries.isNotEmpty()) {
             // TODO error handling
-            launch { transactionLog.write(entries) }.join()
-            replicationBuffer.remove(entries.map { it.first })
+            transactionLog.write(entries).forEach { it.join() }
+            replicationBuffer.markAsReplicated(entries.map { it.first })
           }
-        }
 
-        if (entries.isEmpty()) {
-          log.trace("Waiting 1 second before attempting replication")
-          delay(1.seconds)
-        }
+          if (entries.isEmpty()) {
+            log.trace("Waiting 1 second before attempting replication")
+            delay(1.seconds)
+          }
 
+        }
       }
+    } catch (ex: Exception) {
+      log.error("Replication failure", ex)
+    } finally {
+      close()
     }
   }
 

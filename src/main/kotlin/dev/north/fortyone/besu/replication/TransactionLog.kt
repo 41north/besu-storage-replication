@@ -17,6 +17,7 @@
 package dev.north.fortyone.besu.replication
 
 import dev.north.fortyone.besu.commands.BesuCommandMixin
+import kotlinx.coroutines.Job
 import java.io.Closeable
 import java.lang.IllegalArgumentException
 import java.time.Duration
@@ -43,7 +44,7 @@ interface TransactionLog : Closeable {
 
   val provider: TransactionLogProvider
 
-  suspend fun write(entries: List<Pair<Long, ByteArray>>)
+  suspend fun write(entries: List<Pair<Long, ByteArray>>): List<Job>
 
   suspend fun read(timeout: Duration): List<Pair<Long, ByteArray>>
 

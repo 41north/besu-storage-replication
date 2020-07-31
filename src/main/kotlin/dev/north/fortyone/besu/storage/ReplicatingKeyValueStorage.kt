@@ -21,6 +21,7 @@ import dev.north.fortyone.besu.services.PutEvent
 import dev.north.fortyone.besu.services.RemoveEvent
 import dev.north.fortyone.besu.services.StorageEvent
 import dev.north.fortyone.besu.services.StorageEventsListener
+import dev.north.fortyone.besu.services.StorageTransaction
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorageTransaction
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier
@@ -28,7 +29,7 @@ import java.util.Optional
 import java.util.function.Predicate
 import java.util.stream.Stream
 
-class InterceptingKeyValueStorageTransaction(
+class ReplicatingKeyValueStorageTransaction(
   private val factoryName: String,
   private val segment: SegmentIdentifier,
   private val delegate: KeyValueStorageTransaction,
@@ -49,7 +50,7 @@ class InterceptingKeyValueStorageTransaction(
 
   override fun commit() =
     with(events) {
-      listener.onEvents(factoryName, segment, this)
+      listener.onTransaction(StorageTransaction(factoryName, segment, this))
       delegate.commit()
     }
 
@@ -75,12 +76,15 @@ class InterceptingKeyValueStorage(
     underlyingStorage.get(key)
 
   override fun clear() {
-    listener.onEvents(factoryName, segment, listOf(ClearEvent()))
-    underlyingStorage.clear()
+    listener.onTransaction(
+      StorageTransaction(factoryName, segment, listOf(ClearEvent()))
+    ).also {
+      underlyingStorage.clear()
+    }
   }
 
   override fun startTransaction(): KeyValueStorageTransaction =
-    InterceptingKeyValueStorageTransaction(
+    ReplicatingKeyValueStorageTransaction(
       factoryName,
       segment,
       underlyingStorage.startTransaction(),
@@ -94,9 +98,14 @@ class InterceptingKeyValueStorage(
     // TODO determine scope of edge case here
     with(underlyingStorage) {
       tryDelete(key)
-    }.also { deleted -> if (deleted) listener.onEvents(factoryName, segment, listOf(RemoveEvent(key))) }
+    }.also { deleted ->
+      if (deleted) listener.onTransaction(
+        StorageTransaction(factoryName, segment, listOf(RemoveEvent(key)))
+      )
+    }
 
   override fun close() {
     underlyingStorage.close()
   }
+
 }

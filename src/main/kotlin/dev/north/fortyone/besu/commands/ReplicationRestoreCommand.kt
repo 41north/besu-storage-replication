@@ -16,31 +16,22 @@
 
 package dev.north.fortyone.besu.commands
 
-import dev.north.fortyone.besu.ext.reflektField
 import dev.north.fortyone.besu.ext.replicationManager
 import dev.north.fortyone.besu.ext.toByteArray
 import dev.north.fortyone.besu.ext.toReplicationEvent
 import dev.north.fortyone.besu.replication.fb.ReplicationEventType
 import dev.north.fortyone.besu.replication.fb.TransactionEventType
 import kotlinx.coroutines.runBlocking
-import org.hyperledger.besu.cli.BesuCommand
-import org.hyperledger.besu.controller.BesuController
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier
-import org.hyperledger.besu.metrics.ObservableMetricsSystem
-import org.hyperledger.besu.plugin.services.BesuConfiguration
-import org.hyperledger.besu.plugin.services.MetricsSystem
-import org.hyperledger.besu.plugin.services.StorageService
-import org.hyperledger.besu.services.BesuConfigurationImpl
-import org.hyperledger.besu.services.BesuPluginContextImpl
+import org.hyperledger.besu.plugin.services.storage.KeyValueStorage
+import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier
 import org.slf4j.LoggerFactory
 import picocli.CommandLine.Command
 import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.ParentCommand
 import picocli.CommandLine.Spec
 import java.lang.IllegalArgumentException
-import java.nio.file.Path
 import java.time.Duration
-import java.util.function.Supplier
 
 @Command(
   name = "restore"
@@ -52,50 +43,55 @@ class ReplicationRestoreCommand : Runnable {
   }
 
   @ParentCommand
-  // cannot set this type to BesuCommand as PicoCli gets confused about the parent being the mixin
-  private lateinit var parentCommand: Any
+  private lateinit var parentCommand: ReplicationSubCommand
 
   @Spec
   private lateinit var spec: CommandSpec
 
   override fun run() {
 
-    val besuCommand = (parentCommand as ReplicationSubCommand).parentCommand as BesuCommand
+    with(parentCommand) {
 
-    val dataPath = reflektField<Path>(besuCommand, "dataPath")
-    val pluginContext = reflektField<BesuPluginContextImpl>(besuCommand, "besuPluginContext")
-    val storageService = reflektField<StorageService>(besuCommand, "storageService")
-    val metricsSystem = reflektField<Supplier<ObservableMetricsSystem>>(besuCommand, "metricsSystem")
-    val keyValueStorageName = reflektField<String>(besuCommand, "keyValueStorageName")
+      // initialise plugins
+      pluginContext.startPlugins()
 
-    val dataDir: Path = dataPath.toAbsolutePath()
-    val pluginCommonConfig = BesuConfigurationImpl(dataDir, dataDir.resolve(BesuController.DATABASE_PATH))
-    pluginContext.addService(BesuConfiguration::class.java, pluginCommonConfig)
+      // initialise and clear storage
+      val storageBySegment = initialiseStorage(this)
 
-    pluginContext.addService(MetricsSystem::class.java, metricsSystem.get())
-    pluginContext.startPlugins()
+      // perform the restore
+      restore(this, storageBySegment)
+    }
 
-    val replicationManager = pluginContext.replicationManager()
-    val transactionLog = replicationManager.transactionLog
+    logger.info("Finished")
+  }
 
-    val segments = listOf(
-      KeyValueSegmentIdentifier.BLOCKCHAIN,
-      KeyValueSegmentIdentifier.WORLD_STATE
-    )
+  private fun initialiseStorage(parentCommand: ReplicationSubCommand): Map<SegmentIdentifier, KeyValueStorage> =
+    with(parentCommand) {
 
-    val underlyingStorageFactory = storageService
-      .getByName(keyValueStorageName)
-      .orElseThrow { throw IllegalArgumentException("Invalid key value storage name: $keyValueStorageName") }
+      val storageFactory = storageService
+        .getByName(keyValueStorageName)
+        .orElseThrow { throw IllegalArgumentException("Invalid key value storage name: $keyValueStorageName") }
 
-    // delete local storage
-
-    val storageBySegment =
-      segments
-        .map { segment -> Pair(segment, underlyingStorageFactory.create(segment, pluginCommonConfig, metricsSystem.get())) }
+      storageSegments
+        .zip(
+          storageSegments.map { segment ->
+            storageFactory.create(segment, pluginCommonConfig, metricsSystem)
+              // clear the storage in preparation for restoration
+              .also { storage -> storage.clear() }
+          }
+        )
         .toMap()
-        .also { it.values.forEach{ storage -> storage.clear() }}
+    }
+
+  private fun restore(
+    parentCommand: ReplicationSubCommand,
+    storageBySegment: Map<SegmentIdentifier, KeyValueStorage>
+  ) = with(parentCommand) {
+
+    val transactionLog = parentCommand.pluginContext.replicationManager().transactionLog
 
     var entries: List<Pair<Long, ByteArray>>
+
     do {
 
       entries = runBlocking { transactionLog.read(Duration.ofSeconds(10)) }
@@ -108,32 +104,38 @@ class ReplicationRestoreCommand : Runnable {
 
           val segmentIdentifier = KeyValueSegmentIdentifier.values()
             .find { it.id!!.contentEquals(segmentIdentifierBytes) }
+            ?: throw Error("Could not determine segment identifier")
 
-          val storage = storageBySegment[segmentIdentifier]!!
+          val storage = storageBySegment[segmentIdentifier]
+            ?: throw Error("Could not find storage for segment identifier: $segmentIdentifier")
 
-          when(event.type()) {
+          when (event.type()) {
+
             ReplicationEventType.CLEAR_ALL -> storage.clear()
 
-            ReplicationEventType.TRANSACTION ->
-              storage.startTransaction().run {
+            ReplicationEventType.TRANSACTION -> event.transaction()
+              .also { eventTx ->
 
-                for (eventIdx in 0.until(event.transaction().eventsLength())) {
+                storage.startTransaction().run {
 
-                  val txEvent = event.transaction().events(eventIdx)
+                  for (eventIdx in 0.until(eventTx.eventsLength())) {
 
-                  when(txEvent.type()) {
-                    TransactionEventType.PUT ->
-                      put(txEvent.keyAsByteBuffer().toByteArray(), txEvent.valueAsByteBuffer().toByteArray())
+                    val txEvent = eventTx.events(eventIdx)
 
-                    TransactionEventType.REMOVE ->
-                      remove(txEvent.keyAsByteBuffer().toByteArray())
+                    when (txEvent.type()) {
+
+                      TransactionEventType.PUT ->
+                        put(txEvent.keyAsByteBuffer().toByteArray(), txEvent.valueAsByteBuffer().toByteArray())
+
+                      TransactionEventType.REMOVE ->
+                        remove(txEvent.keyAsByteBuffer().toByteArray())
+                    }
                   }
 
+                  commit()
                 }
 
-                commit()
               }
-
           }
 
         }
@@ -141,8 +143,6 @@ class ReplicationRestoreCommand : Runnable {
       logger.info("Processed {} entries", entries.size)
 
     } while (entries.isNotEmpty())
-
-    logger.info("Finished")
 
   }
 }

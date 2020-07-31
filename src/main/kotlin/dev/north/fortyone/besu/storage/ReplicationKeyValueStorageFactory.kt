@@ -34,15 +34,15 @@ enum class ReplicationSegmentIdentifier(
   override fun getId(): ByteArray = id
 }
 
-class InterceptingKeyValueStorageFactory(
+class ReplicatingKeyValueStorageFactory(
   private val delegate: KeyValueStorageFactory,
   private val listener: StorageEventsListener
 ) : KeyValueStorageFactory {
 
-  private val log = LogManager.getLogger(InterceptingKeyValueStorageFactory::class.java)
+  private val log = LogManager.getLogger(ReplicatingKeyValueStorageFactory::class.java)
 
   override fun getName(): String =
-    "intercepting-storage"
+    "replicating-storage"
 
   override fun isSegmentIsolationSupported(): Boolean =
     delegate.isSegmentIsolationSupported
