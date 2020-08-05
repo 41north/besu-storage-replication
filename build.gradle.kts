@@ -23,17 +23,18 @@ plugins {
   `maven-publish`
   distribution
   id("org.jetbrains.kotlin.jvm") version "1.3.72"
-  id("org.jlleitschuh.gradle.ktlint") version "9.2.1" apply false
-  id("org.jlleitschuh.gradle.ktlint-idea") version "9.2.1" apply true
-  id("com.github.johnrengelman.shadow") version "5.2.0" apply true
+  id("org.jlleitschuh.gradle.ktlint") version "9.3.0" apply false
+  id("org.jlleitschuh.gradle.ktlint-idea") version "9.3.0" apply true
+  id("com.github.johnrengelman.shadow") version "6.0.0" apply true
   id("io.spring.dependency-management") version "1.0.9.RELEASE"
-  id("com.github.ben-manes.versions") version "0.28.0"
+  id("com.github.ben-manes.versions") version "0.29.0"
   id("me.qoomon.git-versioning") version "3.0.0"
   id("dev.north.fortyone.flatbuffers") version "0.1.0"
+  id("dev.north.fortyone.intellij.run.generator") version "0.1.0"
 }
 
 if (!JavaVersion.current().isJava11Compatible) {
-  throw GradleException("Java 11 or later is required to build Exflo. Detected version ${JavaVersion.current()}")
+  throw GradleException("Java 11 or later is required to build this project. Detected version ${JavaVersion.current()}")
 }
 
 version = "0.0.0-SNAPSHOT"
