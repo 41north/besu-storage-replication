@@ -87,15 +87,17 @@ dependencies {
 }
 
 tasks {
+  val javaVersion = "11"
+
   withType<KotlinCompile>().all {
-    sourceCompatibility = "${JavaVersion.VERSION_11}"
-    targetCompatibility = "${JavaVersion.VERSION_11}"
-    kotlinOptions.jvmTarget = "${JavaVersion.VERSION_11}"
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    kotlinOptions.jvmTarget = javaVersion
   }
 
   withType<JavaCompile> {
-    sourceCompatibility = "${JavaVersion.VERSION_11}"
-    targetCompatibility = "${JavaVersion.VERSION_11}"
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
   }
 }
 
