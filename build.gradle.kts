@@ -89,6 +89,10 @@ dependencies {
 tasks {
   val javaVersion = "11"
 
+  jar {
+    enabled = false
+  }
+
   withType<KotlinCompile>().all {
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
@@ -98,6 +102,20 @@ tasks {
   withType<JavaCompile> {
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
+  }
+
+  withType<DependencyUpdatesTask> {
+    fun isNonStable(version: String): Boolean {
+      val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+      val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+      val isStable = stableKeyword || regex.matches(version)
+      return isStable.not()
+    }
+
+    // Reject all non stable versions
+    rejectVersionIf {
+      isNonStable(candidate.version)
+    }
   }
 }
 
@@ -121,6 +139,11 @@ flatbuffers {
   extraFlatcArgs.set("flatc --java -o /output/ -I /input --gen-all /input/replication.fbs")
 }
 
+`intellij-run-generator` {
+  tasksDefinitionsFile.set(File("intellij-run-configs.yaml"))
+  tasksDefinitionOutputDir.set(File(".idea/runConfigurations"))
+}
+
 val distZip: Zip by project.tasks
 distZip.apply {
   dependsOn(":plugin:build")
@@ -142,27 +165,6 @@ distributions {
       from("README.md") { into("") }
       from("CHANGELOG.md") { into("") }
       from("ingestion/postgres/build/libs") { into("plugins") }
-    }
-  }
-}
-
-tasks {
-
-  jar {
-    enabled = false
-  }
-
-  withType<DependencyUpdatesTask> {
-    fun isNonStable(version: String): Boolean {
-      val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
-      val regex = "^[0-9,.v-]+(-r)?$".toRegex()
-      val isStable = stableKeyword || regex.matches(version)
-      return isStable.not()
-    }
-
-    // Reject all non stable versions
-    rejectVersionIf {
-      isNonStable(candidate.version)
     }
   }
 }
