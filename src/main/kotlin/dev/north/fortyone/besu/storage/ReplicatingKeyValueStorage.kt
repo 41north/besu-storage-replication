@@ -77,7 +77,7 @@ class InterceptingKeyValueStorage(
 
   override fun clear() {
     listener.onTransaction(
-      StorageTransaction(factoryName, segment, listOf(ClearEvent()))
+      StorageTransaction(factoryName, segment, listOf(ClearEvent))
     ).also {
       underlyingStorage.clear()
     }

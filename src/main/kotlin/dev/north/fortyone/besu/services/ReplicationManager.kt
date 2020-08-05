@@ -34,11 +34,11 @@ import java.io.Closeable
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
-abstract class StorageEvent
+sealed class StorageEvent
 
 class PutEvent(val key: ByteArray, val value: ByteArray) : StorageEvent()
 class RemoveEvent(val key: ByteArray) : StorageEvent()
-class ClearEvent : StorageEvent()
+object ClearEvent : StorageEvent()
 
 data class StorageTransaction(
   val factoryName: String,
