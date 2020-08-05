@@ -44,7 +44,7 @@ class BesuCommandMixin {
   var txLogProvider: String = "kafka"
 
   @CommandLine.Option(
-    names = ["$cliPrefix-storage-name"],
+    names = ["$cliPrefix-key-value-storage"],
     paramLabel = "<STRING>",
     defaultValue = "rocksdb",
     description = ["The underlying storage factory that should be replicated"]
@@ -52,7 +52,7 @@ class BesuCommandMixin {
   var storageName: String = "rocksdb"
 
   @CommandLine.Option(
-    names = ["$cliPrefix-buffer-storage-name"],
+    names = ["$cliPrefix-buffer-key-value-storage"],
     paramLabel = "<STRING>",
     defaultValue = "rocksdb",
     description = ["The storage factory to be used for the replication buffer"]
