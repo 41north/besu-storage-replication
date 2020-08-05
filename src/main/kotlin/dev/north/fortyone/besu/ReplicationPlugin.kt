@@ -63,31 +63,38 @@ class ReplicationPlugin(
         .addPicoCLIOptions(ReplicationPlugin.name, command)
     }
 
+  @Suppress("ThrowableNotThrown")
   private fun registerStorage(context: BesuContext) =
     context.asPluginContext()
       .run {
+
+        // get the storage factory for the replication buffer
+
+        val bufferStorageFactory = storageService()
+          .getByName(command.bufferStorageName)
+          .orElseThrow { IllegalStateException("Could not find ${command.bufferStorageName} storage factory") }
 
         // register the replication manager service
 
         val replicationManager = TransactionLogProvider
           .instanceFor(command)
-          .let { txLog -> DefaultReplicationManager(txLog) }
+          .let { txLog -> DefaultReplicationManager(bufferStorageFactory, txLog) }
           .also { replicationManager ->
             addService(ReplicationManager::class.java, replicationManager)
           }
 
-        // register the intercepting storage factory, wrapping rocksdb
-        // TODO privacy storage?
+        // register the intercepting storage factory, wrapping the underlying storage
 
         storageService()
           .run {
 
-            val rocksDbFactory = getByName("rocksdb")
-              .orElseThrow { IllegalStateException("RocksDB storage factory not found") }
+            val underlyingStorageFactory = getByName(command.storageName)
+              .orElseThrow { IllegalStateException("${command.storageName} storage factory not found") }
 
             registerKeyValueStorage(
               ReplicatingKeyValueStorageFactory(
-                rocksDbFactory, replicationManager
+                underlyingStorageFactory,
+                replicationManager
               )
             )
           }

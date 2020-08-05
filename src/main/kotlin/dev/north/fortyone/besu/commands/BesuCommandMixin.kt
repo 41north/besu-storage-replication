@@ -16,7 +16,7 @@
 
 package dev.north.fortyone.besu.commands
 
-import dev.north.fortyone.besu.ReplicationPlugin
+import dev.north.fortyone.besu.ReplicationPlugin.Companion.cliPrefix
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Model.CommandSpec
@@ -28,7 +28,7 @@ import picocli.CommandLine.Spec
 class BesuCommandMixin {
 
   @CommandLine.Option(
-    names = ["${ReplicationPlugin.cliPrefix}-enabled"],
+    names = ["$cliPrefix-enabled"],
     paramLabel = "<BOOLEAN>",
     defaultValue = "false",
     description = ["Enable replication"]
@@ -36,17 +36,33 @@ class BesuCommandMixin {
   var replicationEnabled: Boolean = false
 
   @CommandLine.Option(
-    names = ["${ReplicationPlugin.cliPrefix}-tx-log-provider"],
+    names = ["$cliPrefix-tx-log-provider"],
     paramLabel = "<STRING>",
     defaultValue = "kafka",
     description = ["The transaction log implementation to use"]
   )
   var txLogProvider: String = "kafka"
 
+  @CommandLine.Option(
+    names = ["$cliPrefix-storage-name"],
+    paramLabel = "<STRING>",
+    defaultValue = "rocksdb",
+    description = ["The underlying storage factory that should be replicated"]
+  )
+  var storageName: String = "rocksdb"
+
+  @CommandLine.Option(
+    names = ["$cliPrefix-buffer-storage-name"],
+    paramLabel = "<STRING>",
+    defaultValue = "rocksdb",
+    description = ["The storage factory to be used for the replication buffer"]
+  )
+  var bufferStorageName: String = "rocksdb"
+
   // kafka
 
   @CommandLine.Option(
-    names = ["${ReplicationPlugin.cliPrefix}-kafka-bootstrap-servers"],
+    names = ["$cliPrefix-kafka-bootstrap-servers"],
     paramLabel = "<STRING>",
     defaultValue = "kafka:9092",
     description = ["Bootstrap servers for connecting to the kafka cluster"]
@@ -54,7 +70,7 @@ class BesuCommandMixin {
   var kafkaBootstrapServers: String = "kafka:9092"
 
   @CommandLine.Option(
-    names = ["${ReplicationPlugin.cliPrefix}-kafka-client-id"],
+    names = ["$cliPrefix-kafka-client-id"],
     paramLabel = "<STRING>",
     defaultValue = "besu",
     description = ["Unique client id for the kafka connection"]
@@ -62,7 +78,7 @@ class BesuCommandMixin {
   var kafkaClientId: String = "besu"
 
   @CommandLine.Option(
-    names = ["${ReplicationPlugin.cliPrefix}-kafka-group-id"],
+    names = ["$cliPrefix-kafka-group-id"],
     paramLabel = "<STRING>",
     defaultValue = "besu",
     description = ["Name of the kafka consumer group when consuming from the replication topic"]
@@ -70,7 +86,7 @@ class BesuCommandMixin {
   var kafkaGroupId: String = "besu"
 
   @CommandLine.Option(
-    names = ["${ReplicationPlugin.cliPrefix}-kafka-replication-topic"],
+    names = ["$cliPrefix-kafka-replication-topic"],
     paramLabel = "<STRING>",
     defaultValue = "besu_transaction_log",
     description = ["Name of the kafka topic to use for the transaction log"]
