@@ -29,6 +29,7 @@ import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.delay
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.BesuContext
+import org.hyperledger.besu.plugin.services.storage.KeyValueStorageFactory
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier
 import java.io.Closeable
 import kotlin.time.ExperimentalTime
@@ -51,12 +52,16 @@ interface StorageEventsListener {
 }
 
 interface ReplicationManager : StorageEventsListener, Closeable {
+
+  val storageFactory: KeyValueStorageFactory
   val transactionLog: TransactionLog
+
   fun initialise(context: BesuContext)
   suspend fun run()
 }
 
 class DefaultReplicationManager(
+  override val storageFactory: KeyValueStorageFactory,
   override val transactionLog: TransactionLog
 ) : ReplicationManager {
 
@@ -73,21 +78,11 @@ class DefaultReplicationManager(
   override fun initialise(context: BesuContext) =
     with(context) {
 
-      val rocksdbStorageFactory = storageService()
-        .getByName("rocksdb")
-        .orElseThrow { IllegalStateException("Could not find rocksdb storage factory") }
-
-      listOf(besuConfiguration().dataPath, besuConfiguration().storagePath)
-        .map { path -> path.toFile() }
-        .forEach { file -> file.mkdirs() }
-
-      val replicationStorage = rocksdbStorageFactory.create(
+      val replicationStorage = storageFactory.create(
         ReplicationSegmentIdentifier.DEFAULT,
         besuConfiguration(),
         context.metricsSystem()
       )
-
-      replicationBuffer = ReplicationBuffer(replicationStorage)
 
       // drain the startup buffer
       replicationBuffer = ReplicationBuffer(replicationStorage)
