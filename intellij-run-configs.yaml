@@ -22,6 +22,7 @@ application:
       BESU_MINER_ENABLED: 'true'
       BESU_MINER_COINBASE: '0xf17f52151EbEF6C7334FAD080c5704D77216b732'
       BESU_PLUGIN_REPLICATION_ENABLED: 'true'
+      BESU_KEY_VALUE_STORAGE: replicating-storage
 
   # ------------------------------------------------------------------------------
   # ROPSTEN
@@ -42,6 +43,7 @@ application:
       BESU_NETWORK: ROPSTEN
       BESU_DATA_PATH: "/opt/besu/ropsten"
       BESU_PLUGIN_REPLICATION_ENABLED: 'true'
+      BESU_KEY_VALUE_STORAGE: replicating-storage
 
   # ------------------------------------------------------------------------------
   # MAINNET
@@ -62,3 +64,20 @@ application:
       BESU_NETWORK: MAINNET
       BESU_DATA_PATH: "/opt/besu/mainnet"
       BESU_PLUGIN_REPLICATION_ENABLED: 'true'
+      BESU_KEY_VALUE_STORAGE: replicating-storage
+
+  # ------------------------------------------------------------------------------
+  # Commands
+  # ------------------------------------------------------------------------------
+
+  - name: BESU | Replication Export > Run
+    filename: BESU__Replication__Export__Run.xml
+    mainClassName: org.hyperledger.besu.Besu
+    module: besu-storage-replication.main
+    programArguments: export
+
+  - name: BESU | Replication Import > Run
+    filename: BESU__Replication__Import__Run.xml
+    mainClassName: org.hyperledger.besu.Besu
+    module: besu-storage-replication.main
+    programArguments: import

@@ -30,7 +30,7 @@ plugins {
   id("com.github.ben-manes.versions") version "0.29.0"
   id("me.qoomon.git-versioning") version "3.0.0"
   id("dev.north.fortyone.flatbuffers") version "0.1.0"
-  id("dev.north.fortyone.intellij.run.generator") version "0.1.0"
+  id("dev.north.fortyone.intellij.run.generator") version "0.1.2"
 }
 
 if (!JavaVersion.current().isJava11Compatible) {
