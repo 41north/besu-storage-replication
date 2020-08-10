@@ -4,7 +4,7 @@
 
 ## 💡 Introduction
 
-This plugin allows to export / restore your Besu key / value storage to other supported systems. This approach would allow us the following benefits:
+This plugin allows to export / restore your Besu key / value storage to other supported systems. This approach would allow us to achieve the following:
 
 - Creation of incremental backups for data archiving.
 - Restoration of backups with a known good state that avoids resynchronization and validation from the network for the same data.
@@ -12,7 +12,15 @@ This plugin allows to export / restore your Besu key / value storage to other su
 
 ## 🙈 Usage
 
-TBW
+Build the plugin:
+
+```sh
+./gradlew assemble
+```
+
+The compiled `jar` can be found inside the following `.build/distributions` folder.
+
+Follow these [recommendations on how to run a Besu plugin](https://besu.hyperledger.org/en/stable/Concepts/Plugins/) if you need more information.
 
 ## 🧑‍💻 Development
 
@@ -49,11 +57,7 @@ That will start Kafka as a backup mechanism. Next is to start Besu with one netw
 
 Leave the client running as much as you want. It will autobackup it's storage to Kafka.
 
-Stop the client and remove the storage folder where Besu stores the data. Next, execute the following run config:
-
-`Besu | Replication ${network} Restore > Run`
-
-Where `${network}` is the network you decided to execute.
+Stop the client and remove the storage folder where Besu stores the data. Next, execute the following run config: `Besu | Replication ${network} Restore > Run` (where `${network}` is the network you decided to execute).
 
 Voilá! Your have restored the state of your node.
 
