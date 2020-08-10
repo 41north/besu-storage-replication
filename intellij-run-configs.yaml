@@ -64,7 +64,7 @@ envs:
 # ------------------------------------------------------------------------------
 # COMMAND - Replication Plugin Dev Network Export
 # ------------------------------------------------------------------------------
-name: BESU | Replication Export > Run
+name: BESU | Replication Export Dev > Run
 filename: BESU__Replication__Dev__Network__Export__Run.xml
 mainClassName: org.hyperledger.besu.Besu
 module: besu-storage-replication.main
@@ -83,7 +83,7 @@ envs:
 # ------------------------------------------------------------------------------
 # COMMAND - Replication Plugin Ropsten Network Export
 # ------------------------------------------------------------------------------
-name: BESU | Replication Export > Run
+name: BESU | Replication Export Ropsten > Run
 filename: BESU__Replication__Ropsten__Network__Export__Run.xml
 mainClassName: org.hyperledger.besu.Besu
 module: besu-storage-replication.main
@@ -102,7 +102,7 @@ envs:
 # ------------------------------------------------------------------------------
 # COMMAND - Replication Plugin Mainnet Network Export
 # ------------------------------------------------------------------------------
-name: BESU | Replication Export > Run
+name: BESU | Replication Export Mainnet > Run
 filename: BESU__Replication__Mainnet__Network__Export__Run.xml
 mainClassName: org.hyperledger.besu.Besu
 module: besu-storage-replication.main
