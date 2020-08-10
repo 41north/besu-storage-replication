@@ -38,7 +38,8 @@ import java.util.function.Supplier
   subcommands = [
     ReplicationRestoreCommand::class,
     ReplicationExportCommand::class
-  ]
+  ],
+  description = ["Replication of your Besu key/value storage for incremental backup and read only replicas."]
 )
 class ReplicationSubCommand : Runnable {
 

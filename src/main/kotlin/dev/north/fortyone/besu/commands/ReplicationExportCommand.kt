@@ -31,7 +31,8 @@ import picocli.CommandLine.ParentCommand
 import picocli.CommandLine.Spec
 
 @Command(
-  name = "export"
+  name = "export",
+  description = ["Export your Besu key/value storage to supported external services."]
 )
 class ReplicationExportCommand : Runnable {
 

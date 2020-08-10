@@ -34,7 +34,8 @@ import java.lang.IllegalArgumentException
 import java.time.Duration
 
 @Command(
-  name = "restore"
+  name = "restore",
+  description = ["Restore a key/value storage backup from external service."]
 )
 class ReplicationRestoreCommand : Runnable {
 
