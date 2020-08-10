@@ -44,7 +44,7 @@ class ReplicationSubCommand : Runnable {
 
   @ParentCommand
   // cannot set this type to BesuCommand as PicoCli gets confused about the parent being the mixin
-  public lateinit var parentCommand: Any
+  lateinit var parentCommand: Any
 
   // need to use a getter as the parent command is a lateinit
   val besuCommand: BesuCommand
