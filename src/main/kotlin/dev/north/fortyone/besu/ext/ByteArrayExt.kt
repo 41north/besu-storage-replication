@@ -23,7 +23,7 @@ fun ByteArray.toLong(): Long {
   val buffer: ByteBuffer = ByteBuffer.allocate(java.lang.Long.BYTES)
   buffer.put(this)
   buffer.flip() // need flip
-  return buffer.getLong()
+  return buffer.long
 }
 
 fun ByteArray.toReplicationEvent(): ReplicationEvent =
