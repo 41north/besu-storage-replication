@@ -18,6 +18,10 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
+if (!JavaVersion.current().isJava11Compatible) {
+  throw GradleException("Java 11 or later is required to build this project. Detected version ${JavaVersion.current()}")
+}
+
 plugins {
   `java-library`
   `maven-publish`
@@ -30,11 +34,7 @@ plugins {
   id("com.github.ben-manes.versions") version "0.29.0"
   id("me.qoomon.git-versioning") version "3.0.0"
   id("dev.north.fortyone.flatbuffers") version "0.1.0"
-  id("dev.north.fortyone.intellij.run.generator") version "0.1.2"
-}
-
-if (!JavaVersion.current().isJava11Compatible) {
-  throw GradleException("Java 11 or later is required to build this project. Detected version ${JavaVersion.current()}")
+  id("dev.north.fortyone.intellij.run.generator") version "0.2.0"
 }
 
 version = "0.0.0-SNAPSHOT"
@@ -139,9 +139,9 @@ flatbuffers {
   extraFlatcArgs.set("flatc --java -o /output/ -I /input --gen-all /input/replication.fbs")
 }
 
-`intellij-run-generator` {
-  tasksDefinitionsFile.set(File("intellij-run-configs.yaml"))
-  tasksDefinitionOutputDir.set(File(".idea/runConfigurations"))
+intellijRunGenerator {
+  tasksDefinitions.set(File("intellij-run-configs.yaml"))
+  tasksDefinitionOutput.set(File(".idea/runConfigurations"))
 }
 
 val distZip: Zip by project.tasks

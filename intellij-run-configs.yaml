@@ -1,83 +1,176 @@
----
-application:
-
-  # ------------------------------------------------------------------------------
-  # DEV
-  # ------------------------------------------------------------------------------
-
-  - name: BESU | Dev > Run
-    filename: BESU__Dev__Run.xml
-    default: false
-    mainClassName: org.hyperledger.besu.Besu
-    module: besu-storage-replication.main
-    envs:
-      BESU_SYNC_MODE: FULL
-      BESU_LOGGING: INFO
-      BESU_P2P_ENABLED: 'false'
-      BESU_RPC_WS_ENABLED: 'true'
-      BESU_RPC_HTTP_ENABLED: 'true'
-      BESU_RPC_HTTP_API: eth,net,web3,admin,debug
-      BESU_NETWORK: DEV
-      BESU_DATA_PATH: "/opt/besu/dev"
-      BESU_MINER_ENABLED: 'true'
-      BESU_MINER_COINBASE: '0xf17f52151EbEF6C7334FAD080c5704D77216b732'
-      BESU_PLUGIN_REPLICATION_ENABLED: 'true'
-      BESU_KEY_VALUE_STORAGE: replicating-storage
-
-  # ------------------------------------------------------------------------------
-  # ROPSTEN
-  # ------------------------------------------------------------------------------
-
-  - name: BESU | Ropsten > Run
-    filename: BESU__Ropsten__Run.xml
-    default: false
-    mainClassName: org.hyperledger.besu.Besu
-    module: besu-storage-replication.main
-    envs:
-      BESU_SYNC_MODE: FULL
-      BESU_LOGGING: INFO
-      BESU_P2P_ENABLED: 'true'
-      BESU_RPC_WS_ENABLED: 'true'
-      BESU_RPC_HTTP_ENABLED: 'true'
-      BESU_RPC_HTTP_API: eth,net,web3,admin,debug
-      BESU_NETWORK: ROPSTEN
-      BESU_DATA_PATH: "/opt/besu/ropsten"
-      BESU_PLUGIN_REPLICATION_ENABLED: 'true'
-      BESU_KEY_VALUE_STORAGE: replicating-storage
-
-  # ------------------------------------------------------------------------------
-  # MAINNET
-  # ------------------------------------------------------------------------------
-
-  - name: BESU | Mainnet > Run
-    filename: BESU__Mainnet__Run.xml
-    default: false
-    mainClassName: org.hyperledger.besu.Besu
-    module: besu-storage-replication.main
-    envs:
-      BESU_SYNC_MODE: FULL
-      BESU_LOGGING: INFO
-      BESU_P2P_ENABLED: 'true'
-      BESU_RPC_WS_ENABLED: 'true'
-      BESU_RPC_HTTP_ENABLED: 'true'
-      BESU_RPC_HTTP_API: eth,net,web3,admin,debug
-      BESU_NETWORK: MAINNET
-      BESU_DATA_PATH: "/opt/besu/mainnet"
-      BESU_PLUGIN_REPLICATION_ENABLED: 'true'
-      BESU_KEY_VALUE_STORAGE: replicating-storage
-
-  # ------------------------------------------------------------------------------
-  # Commands
-  # ------------------------------------------------------------------------------
-
-  - name: BESU | Replication Export > Run
-    filename: BESU__Replication__Export__Run.xml
-    mainClassName: org.hyperledger.besu.Besu
-    module: besu-storage-replication.main
-    programArguments: export
-
-  - name: BESU | Replication Import > Run
-    filename: BESU__Replication__Import__Run.xml
-    mainClassName: org.hyperledger.besu.Besu
-    module: besu-storage-replication.main
-    programArguments: import
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# BESU - Dev Network
+# ------------------------------------------------------------------------------
+name: BESU | Dev > Run
+filename: BESU__Dev__Run.xml
+default: false
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'false'
+  BESU_RPC_WS_ENABLED: 'true'
+  BESU_RPC_HTTP_ENABLED: 'true'
+  BESU_RPC_HTTP_API: eth,net,web3,admin,debug
+  BESU_NETWORK: DEV
+  BESU_DATA_PATH: /opt/besu/dev
+  BESU_MINER_ENABLED: 'true'
+  BESU_MINER_COINBASE: '0xf17f52151EbEF6C7334FAD080c5704D77216b732'
+  BESU_PLUGIN_REPLICATION_ENABLED: 'true'
+  BESU_KEY_VALUE_STORAGE: replicating-storage
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# BESU - Ropsten Network
+# ------------------------------------------------------------------------------
+name: BESU | Ropsten > Run
+filename: BESU__Ropsten__Run.xml
+default: false
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'true'
+  BESU_RPC_WS_ENABLED: 'true'
+  BESU_RPC_HTTP_ENABLED: 'true'
+  BESU_RPC_HTTP_API: eth,net,web3,admin,debug
+  BESU_NETWORK: ROPSTEN
+  BESU_DATA_PATH: /opt/besu/ropsten
+  BESU_PLUGIN_REPLICATION_ENABLED: 'true'
+  BESU_KEY_VALUE_STORAGE: replicating-storage
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# BESU - Mainnet Network
+# ------------------------------------------------------------------------------
+name: BESU | Mainnet > Run
+filename: BESU__Mainnet__Run.xml
+default: false
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'true'
+  BESU_RPC_WS_ENABLED: 'true'
+  BESU_RPC_HTTP_ENABLED: 'true'
+  BESU_RPC_HTTP_API: eth,net,web3,admin,debug
+  BESU_NETWORK: MAINNET
+  BESU_DATA_PATH: /opt/besu/mainnet
+  BESU_PLUGIN_REPLICATION_ENABLED: 'true'
+  BESU_KEY_VALUE_STORAGE: replicating-storage
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# COMMAND - Replication Plugin Dev Network Export
+# ------------------------------------------------------------------------------
+name: BESU | Replication Export > Run
+filename: BESU__Replication__Dev__Network__Export__Run.xml
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+programArguments: replication export
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'false'
+  BESU_NETWORK: DEV
+  BESU_DATA_PATH: /opt/besu/dev
+  BESU_PLUGIN_REPLICATION_ENABLED: 'false'
+  BESU_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_BUFFER_KEY_VALUE_STORAGE: rocksdb
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# COMMAND - Replication Plugin Ropsten Network Export
+# ------------------------------------------------------------------------------
+name: BESU | Replication Export > Run
+filename: BESU__Replication__Ropsten__Network__Export__Run.xml
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+programArguments: replication export
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'false'
+  BESU_NETWORK: ROPSTEN
+  BESU_DATA_PATH: /opt/besu/ropsten
+  BESU_PLUGIN_REPLICATION_ENABLED: 'false'
+  BESU_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_BUFFER_KEY_VALUE_STORAGE: rocksdb
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# COMMAND - Replication Plugin Mainnet Network Export
+# ------------------------------------------------------------------------------
+name: BESU | Replication Export > Run
+filename: BESU__Replication__Mainnet__Network__Export__Run.xml
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+programArguments: replication export
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'false'
+  BESU_NETWORK: DEV
+  BESU_DATA_PATH: /opt/besu/mainnet
+  BESU_PLUGIN_REPLICATION_ENABLED: 'false'
+  BESU_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_BUFFER_KEY_VALUE_STORAGE: rocksdb
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# COMMAND - Replication Plugin Dev Network Restore
+# ------------------------------------------------------------------------------
+name: BESU | Replication Dev Network Restore > Run
+filename: BESU__Replication__Dev__Network__Restore__Run.xml
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+programArguments: replication restore
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'false'
+  BESU_NETWORK: DEV
+  BESU_DATA_PATH: /opt/besu/dev
+  BESU_PLUGIN_REPLICATION_ENABLED: 'false'
+  BESU_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_BUFFER_KEY_VALUE_STORAGE: rocksdb
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# COMMAND - Replication Plugin Ropsten Network Restore
+# ------------------------------------------------------------------------------
+name: BESU | Replication Ropsten Network Restore > Run
+filename: BESU__Replication__Ropsten__Network__Restore__Run.xml
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+programArguments: replication restore
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'false'
+  BESU_NETWORK: ROPSTEN
+  BESU_DATA_PATH: /opt/besu/ropsten
+  BESU_PLUGIN_REPLICATION_ENABLED: 'false'
+  BESU_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_BUFFER_KEY_VALUE_STORAGE: rocksdb
+--- !!dev.north.fortyone.gradle.intellij.run.generator.models.ApplicationRunConfig
+# ------------------------------------------------------------------------------
+# COMMAND - Replication Plugin Mainnet Network Restore
+# ------------------------------------------------------------------------------
+name: BESU | Replication Mainnet Network Restore > Run
+filename: BESU__Replication__Mainnet__Network__Restore__Run.xml
+mainClassName: org.hyperledger.besu.Besu
+module: besu-storage-replication.main
+programArguments: replication restore
+envs:
+  BESU_SYNC_MODE: FULL
+  BESU_LOGGING: INFO
+  BESU_P2P_ENABLED: 'false'
+  BESU_NETWORK: MAINNET
+  BESU_DATA_PATH: /opt/besu/mainnet
+  BESU_PLUGIN_REPLICATION_ENABLED: 'false'
+  BESU_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_KEY_VALUE_STORAGE: rocksdb
+  BESU_PLUGIN_REPLICATION_BUFFER_KEY_VALUE_STORAGE: rocksdb
