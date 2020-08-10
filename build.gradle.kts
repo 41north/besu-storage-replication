@@ -146,13 +146,11 @@ intellijRunGenerator {
 
 val distZip: Zip by project.tasks
 distZip.apply {
-  dependsOn(":plugin:build")
   doFirst { delete { fileTree(Pair("build/distributions", "*.zip")) } }
 }
 
 val distTar: Tar by project.tasks
 distTar.apply {
-  dependsOn("plugin:build")
   doFirst { delete { fileTree(Pair("build/distributions", "*.tar.gz")) } }
   compression = Compression.GZIP
   archiveExtension.set("tar.gz")
