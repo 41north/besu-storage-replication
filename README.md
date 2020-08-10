@@ -4,11 +4,58 @@
 
 ## 💡 Introduction
 
-TBW
+This plugin allows to export / restore your Besu key / value storage to other supported systems. This approach would allow us the following benefits:
+
+- Creation of incremental backups for data archiving.
+- Restoration of backups with a known good state that avoids resynchronization and validation from the network for the same data.
+- Creation of a Besu cluster where one node acts as a master (writing / updating) and other nodes act as read only replicas.
 
 ## 🙈 Usage
 
 TBW
+
+## 🧑‍💻 Development
+
+Prerequisites:
+
+- [IntelliJ](https://www.jetbrains.com/idea/)
+- [Java 11](https://jdk.java.net/11/)
+
+First, clone this repository:
+
+```sh
+git clone git@github.com:41north/besu-storage-replication.git
+```
+
+Open IntelliJ, load the project and type the following in the terminal:
+
+```sh
+./gradlew generateIntellijRunConfigs
+```
+
+That will generate [Intellij's Run Configuration](https://www.jetbrains.com/help/idea/run-debug-configuration.html) from the [`intellij-run-configs.yaml`](./intellij-run-configs.yaml) file with several useful commands (feel free to customize it as necessary).
+
+After the run configs are generated, next type the following in the the terminal:
+
+```sh
+docker-compose up
+```
+
+That will start Kafka as a backup mechanism. Next is to start Besu with one network by launching one of the following run config:
+
+- `BESU | Dev > Run`
+- `BESU | Ropsten > Run`
+- `BESU | Mainnet > Run`
+
+Leave the client running as much as you want. It will autobackup it's storage to Kafka.
+
+Stop the client and remove the storage folder where Besu stores the data. Next, execute the following run config:
+
+`Besu | Replication ${network} Restore > Run`
+
+Where `${network}` is the network you decided to execute.
+
+Voilá! Your have restored the state of your node.
 
 ## 💻 Contribute
 
