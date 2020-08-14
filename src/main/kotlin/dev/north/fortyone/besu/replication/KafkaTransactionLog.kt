@@ -88,7 +88,7 @@ class KafkaTransactionLog(
         .map { record -> producer.send(record) }
 
       // wait for completion asynchronously
-      futures.map { future -> launch { future.get(60, TimeUnit.SECONDS) }}
+      futures.map { future -> launch { future.get(60, TimeUnit.SECONDS) } }
     }
 
   override suspend fun read(timeout: Duration): List<Pair<Long, ByteArray>> =

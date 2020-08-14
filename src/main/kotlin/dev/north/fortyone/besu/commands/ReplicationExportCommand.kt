@@ -17,8 +17,9 @@
 package dev.north.fortyone.besu.commands
 
 import com.google.common.collect.Iterators
-import dev.north.fortyone.besu.ext.replicationManager
+import dev.north.fortyone.besu.ext.getService
 import dev.north.fortyone.besu.services.PutEvent
+import dev.north.fortyone.besu.services.ReplicationManager
 import dev.north.fortyone.besu.services.StorageTransaction
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
@@ -86,7 +87,7 @@ class ReplicationExportCommand : Runnable {
     storageBySegment: Map<SegmentIdentifier, KeyValueStorage>
   ) = with(parentCommand) {
 
-    val replicationManager = pluginContext.replicationManager()
+    val replicationManager = pluginContext.getService<ReplicationManager>()
 
     var replicationJobs = emptyList<Job>()
 
@@ -100,7 +101,6 @@ class ReplicationExportCommand : Runnable {
             logger.info("{} replication jobs completed", replicationJobs.size)
             replicationJobs = emptyList()
           }
-
       }
     }
 
@@ -128,9 +128,7 @@ class ReplicationExportCommand : Runnable {
               replicationJobs = replicationJobs + replicationJob
               tryWaitOnReplicationJobs(false)
             }
-
         } while (batchIterator.hasNext())
-
       }
 
     // wait on any remaining jobs that didn't meet the batch threshold

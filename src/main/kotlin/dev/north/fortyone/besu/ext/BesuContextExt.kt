@@ -16,12 +16,7 @@
 
 package dev.north.fortyone.besu.ext
 
-import dev.north.fortyone.besu.services.ReplicationManager
 import org.hyperledger.besu.plugin.BesuContext
-import org.hyperledger.besu.plugin.services.BesuConfiguration
-import org.hyperledger.besu.plugin.services.MetricsSystem
-import org.hyperledger.besu.plugin.services.PicoCLIOptions
-import org.hyperledger.besu.plugin.services.StorageService
 import org.hyperledger.besu.services.BesuPluginContextImpl
 import java.lang.IllegalStateException
 
@@ -31,30 +26,10 @@ inline fun <reified T : Any> reflektField(entity: Any, fieldName: String): T {
   return field.get(entity) as T
 }
 
+inline fun <reified T> BesuContext.getService(): T =
+  this
+    .getService(T::class.java)
+    .orElseThrow { IllegalStateException("Service ${T::class.java.simpleName} not found or null!") }
+
 fun BesuContext.asPluginContext(): BesuPluginContextImpl =
   this as BesuPluginContextImpl
-
-fun BesuContext.storageService(): StorageService =
-  this
-    .getService(StorageService::class.java)
-    .orElseThrow { IllegalStateException("Could not find StorageService") }
-
-fun BesuContext.besuConfiguration(): BesuConfiguration =
-  this
-    .getService(BesuConfiguration::class.java)
-    .orElseThrow { IllegalStateException("Could not find BesuConfiguration") }
-
-fun BesuContext.metricsSystem(): MetricsSystem =
-  this
-    .getService(MetricsSystem::class.java)
-    .orElseThrow { IllegalStateException("Could not find MetricsSystem") }
-
-fun BesuContext.cliOptions(): PicoCLIOptions =
-  this
-    .getService(PicoCLIOptions::class.java)
-    .orElseThrow { IllegalStateException("Could not find PicoCLIOptions") }
-
-fun BesuContext.replicationManager(): ReplicationManager =
-  this
-    .getService(ReplicationManager::class.java)
-    .orElseThrow { IllegalStateException("Could not find ReplicationManager") }

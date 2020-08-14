@@ -18,17 +18,24 @@ package dev.north.fortyone.besu
 
 import dev.north.fortyone.besu.commands.BesuCommandMixin
 import dev.north.fortyone.besu.ext.asPluginContext
-import dev.north.fortyone.besu.ext.cliOptions
-import dev.north.fortyone.besu.ext.replicationManager
-import dev.north.fortyone.besu.ext.storageService
+import dev.north.fortyone.besu.ext.getService
 import dev.north.fortyone.besu.replication.TransactionLogProvider
 import dev.north.fortyone.besu.services.DefaultReplicationManager
 import dev.north.fortyone.besu.services.ReplicationManager
 import dev.north.fortyone.besu.storage.ReplicatingKeyValueStorageFactory
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.BesuContext
 import org.hyperledger.besu.plugin.BesuPlugin
+import org.hyperledger.besu.plugin.services.PicoCLIOptions
+import org.hyperledger.besu.plugin.services.StorageService
 import kotlin.coroutines.CoroutineContext
 
 class ReplicationPlugin(
@@ -59,7 +66,7 @@ class ReplicationPlugin(
   private fun registerCli(context: BesuContext) =
     // register our cli options and sub commands
     context.run {
-      cliOptions()
+      getService<PicoCLIOptions>()
         .addPicoCLIOptions(ReplicationPlugin.name, command)
     }
 
@@ -70,7 +77,7 @@ class ReplicationPlugin(
 
         // get the storage factory for the replication buffer
 
-        val bufferStorageFactory = storageService()
+        val bufferStorageFactory = context.getService<StorageService>()
           .getByName(command.bufferStorageName)
           .orElseThrow { IllegalStateException("Could not find ${command.bufferStorageName} storage factory") }
 
@@ -85,7 +92,7 @@ class ReplicationPlugin(
 
         // register the intercepting storage factory, wrapping the underlying storage
 
-        storageService()
+        context.getService<StorageService>()
           .run {
 
             val underlyingStorageFactory = getByName(command.storageName)
@@ -98,7 +105,6 @@ class ReplicationPlugin(
               )
             )
           }
-
       }
 
   @Suppress("ThrowableNotThrown")
@@ -110,25 +116,24 @@ class ReplicationPlugin(
         context.run {
 
           log.info("Initialising replication manager")
-          replicationManager().initialise(context)
+          getService<ReplicationManager>().initialise(context)
 
           log.info("Starting replication thread")
 
           replicationJob = launch {
 
             try {
-              replicationManager().run()
+              context.getService<ReplicationManager>().run()
             } catch (ex: Exception) {
               // TODO improve
               ex.printStackTrace()
             } finally {
               withContext(NonCancellable) {
-                replicationManager().close()
+                context.getService<ReplicationManager>().close()
               }
             }
           }
         }
-
       }
 
   override fun stop() {

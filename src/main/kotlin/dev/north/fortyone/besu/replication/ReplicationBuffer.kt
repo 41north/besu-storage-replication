@@ -125,24 +125,26 @@ class ReplicationBuffer(
           val eventsOffset = storageEvents
             .map { event ->
               when (event) {
-                is PutEvent -> Pair(
-                  fb.createByteVector(event.key),
-                  fb.createByteVector(event.value)
-                ).let { (keyOffset, valueOffset) ->
-                  TransactionEvent.startTransactionEvent(fb)
-                  TransactionEvent.addType(fb, TransactionEventType.PUT)
-                  TransactionEvent.addKey(fb, keyOffset)
-                  TransactionEvent.addValue(fb, valueOffset)
-                  TransactionEvent.endTransactionEvent(fb)
-                }
-                is RemoveEvent -> fb
-                  .createByteVector(event.key)
-                  .let { keyOffset ->
+                is PutEvent ->
+                  Pair(
+                    fb.createByteVector(event.key),
+                    fb.createByteVector(event.value)
+                  ).let { (keyOffset, valueOffset) ->
                     TransactionEvent.startTransactionEvent(fb)
-                    TransactionEvent.addType(fb, TransactionEventType.REMOVE)
+                    TransactionEvent.addType(fb, TransactionEventType.PUT)
                     TransactionEvent.addKey(fb, keyOffset)
+                    TransactionEvent.addValue(fb, valueOffset)
                     TransactionEvent.endTransactionEvent(fb)
                   }
+                is RemoveEvent ->
+                  fb
+                    .createByteVector(event.key)
+                    .let { keyOffset ->
+                      TransactionEvent.startTransactionEvent(fb)
+                      TransactionEvent.addType(fb, TransactionEventType.REMOVE)
+                      TransactionEvent.addKey(fb, keyOffset)
+                      TransactionEvent.endTransactionEvent(fb)
+                    }
                 else -> throw IllegalStateException()
               }
             }.let { eventIndices -> Transaction.createEventsVector(fb, eventIndices.toIntArray()) }

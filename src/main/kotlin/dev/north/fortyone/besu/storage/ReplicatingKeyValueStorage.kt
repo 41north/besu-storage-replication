@@ -107,5 +107,4 @@ class InterceptingKeyValueStorage(
   override fun close() {
     underlyingStorage.close()
   }
-
 }

@@ -16,11 +16,12 @@
 
 package dev.north.fortyone.besu.commands
 
-import dev.north.fortyone.besu.ext.replicationManager
+import dev.north.fortyone.besu.ext.getService
 import dev.north.fortyone.besu.ext.toByteArray
 import dev.north.fortyone.besu.ext.toReplicationEvent
 import dev.north.fortyone.besu.replication.fb.ReplicationEventType
 import dev.north.fortyone.besu.replication.fb.TransactionEventType
+import dev.north.fortyone.besu.services.ReplicationManager
 import kotlinx.coroutines.runBlocking
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage
@@ -89,7 +90,7 @@ class ReplicationRestoreCommand : Runnable {
     storageBySegment: Map<SegmentIdentifier, KeyValueStorage>
   ) = with(parentCommand) {
 
-    val transactionLog = parentCommand.pluginContext.replicationManager().transactionLog
+    val transactionLog = parentCommand.pluginContext.getService<ReplicationManager>().transactionLog
 
     var entries: List<Pair<Long, ByteArray>>
 
@@ -114,36 +115,33 @@ class ReplicationRestoreCommand : Runnable {
 
             ReplicationEventType.CLEAR_ALL -> storage.clear()
 
-            ReplicationEventType.TRANSACTION -> event.transaction()
-              .also { eventTx ->
+            ReplicationEventType.TRANSACTION ->
+              event.transaction()
+                .also { eventTx ->
 
-                storage.startTransaction().run {
+                  storage.startTransaction().run {
 
-                  for (eventIdx in 0.until(eventTx.eventsLength())) {
+                    for (eventIdx in 0.until(eventTx.eventsLength())) {
 
-                    val txEvent = eventTx.events(eventIdx)
+                      val txEvent = eventTx.events(eventIdx)
 
-                    when (txEvent.type()) {
+                      when (txEvent.type()) {
 
-                      TransactionEventType.PUT ->
-                        put(txEvent.keyAsByteBuffer().toByteArray(), txEvent.valueAsByteBuffer().toByteArray())
+                        TransactionEventType.PUT ->
+                          put(txEvent.keyAsByteBuffer().toByteArray(), txEvent.valueAsByteBuffer().toByteArray())
 
-                      TransactionEventType.REMOVE ->
-                        remove(txEvent.keyAsByteBuffer().toByteArray())
+                        TransactionEventType.REMOVE ->
+                          remove(txEvent.keyAsByteBuffer().toByteArray())
+                      }
                     }
+
+                    commit()
                   }
-
-                  commit()
                 }
-
-              }
           }
-
         }
 
       logger.info("Processed {} entries", entries.size)
-
     } while (entries.isNotEmpty())
-
   }
 }

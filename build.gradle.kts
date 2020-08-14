@@ -15,9 +15,9 @@
  */
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 if (!JavaVersion.current().isJava11Compatible) {
   throw GradleException("Java 11 or later is required to build this project. Detected version ${JavaVersion.current()}")
@@ -139,7 +139,7 @@ tasks {
         "config",
         "metrics-core"
       ).forEach { dep ->
-        exclude(dependency("org.hyperledger.besu.internal:${dep}"))
+        exclude(dependency("org.hyperledger.besu.internal:$dep"))
       }
       exclude(dependency("info.picocli:picocli"))
     }

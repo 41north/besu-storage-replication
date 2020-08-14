@@ -16,8 +16,7 @@
 
 package dev.north.fortyone.besu.services
 
-import dev.north.fortyone.besu.ext.besuConfiguration
-import dev.north.fortyone.besu.ext.metricsSystem
+import dev.north.fortyone.besu.ext.getService
 import dev.north.fortyone.besu.replication.ReplicationBuffer
 import dev.north.fortyone.besu.replication.TransactionLog
 import dev.north.fortyone.besu.storage.ReplicationSegmentIdentifier
@@ -28,6 +27,8 @@ import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.delay
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.BesuContext
+import org.hyperledger.besu.plugin.services.BesuConfiguration
+import org.hyperledger.besu.plugin.services.MetricsSystem
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorageFactory
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier
 import java.io.Closeable
@@ -79,8 +80,8 @@ class DefaultReplicationManager(
 
       val replicationStorage = storageFactory.create(
         ReplicationSegmentIdentifier.DEFAULT,
-        besuConfiguration(),
-        context.metricsSystem()
+        getService<BesuConfiguration>(),
+        getService<MetricsSystem>()
       )
 
       // drain the startup buffer
@@ -95,7 +96,6 @@ class DefaultReplicationManager(
                 else
                   job.completeExceptionally(exception)
               }
-
           }
 
           // clear the startup buffer
@@ -136,7 +136,6 @@ class DefaultReplicationManager(
             log.trace("Waiting 1 second before attempting replication")
             delay(1.seconds)
           }
-
         }
       }
     } catch (ex: Exception) {
