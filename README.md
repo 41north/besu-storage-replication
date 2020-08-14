@@ -4,11 +4,11 @@
 
 ## 💡 Introduction
 
-This plugin allows to export / restore your Besu key / value storage to other supported systems. This approach would allow us to achieve the following:
+This plugin allows you to export/restore your Besu key/value storage to other supported systems. This approach would enable us to achieve the following:
 
 - Creation of incremental backups for data archiving.
 - Restoration of backups with a known good state that avoids resynchronization and validation from the network for the same data.
-- Creation of a Besu cluster where one node acts as a master (writing / updating) and other nodes act as read only replicas.
+- Creation of a Besu cluster where one node acts as a master (writing/updating) and other nodes serve as read-only replicas.
 
 ## 🙈 Usage
 
@@ -43,7 +43,7 @@ Open IntelliJ, load the project and type the following in the terminal:
 
 That will generate [Intellij's Run Configuration](https://www.jetbrains.com/help/idea/run-debug-configuration.html) from the [`intellij-run-configs.yaml`](./intellij-run-configs.yaml) file with several useful commands (feel free to customize it as necessary).
 
-After the run configs are generated, next type the following in the the terminal:
+After the run configs are generated, next type the following in the terminal:
 
 ```sh
 docker-compose up
@@ -55,11 +55,11 @@ That will start Kafka as a backup mechanism. Next is to start Besu with one netw
 - `BESU | Ropsten > Run`
 - `BESU | Mainnet > Run`
 
-Leave the client running as much as you want. It will autobackup it's storage to Kafka.
+Leave the client running as much as you want. It will auto backup it's storage to Kafka.
 
 Stop the client and remove the storage folder where Besu stores the data. Next, execute the following run config: `Besu | Replication ${network} Restore > Run` (where `${network}` is the network you decided to execute).
 
-Voilá! Your have restored the state of your node.
+Voilá! You have restored the state of your node.
 
 ## 💻 Contribute
 
@@ -86,10 +86,8 @@ Also, have a look at our [Awesome Besu](https://github.com/41north/awesome-besu)
 
 `Besu Storage Replication Plugin` has been developed initially by [°41North](https://41north.dev). 
 
-If you think this project would be useful for your use case and want to talk more about it you can reach out to us via 
-our contact form or by sending an email to `hello@41north.dev`. We try to respond within 48 hours and look forward to hearing from you.
+If you think this project would be useful for your use case and want to talk more about it, you can reach out to us via our contact form or by sending an email to `hello@41north.dev`. We try to respond within 48 hours and look forward to hearing from you.
 
 ## ✍️ License
 
 `Besu Plugin Starter` is free and open-source software licensed under the [Apache 2.0 License](./LICENSE).
-
