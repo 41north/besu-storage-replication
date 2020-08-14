@@ -17,6 +17,7 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 if (!JavaVersion.current().isJava11Compatible) {
   throw GradleException("Java 11 or later is required to build this project. Detected version ${JavaVersion.current()}")
@@ -27,10 +28,9 @@ plugins {
   `maven-publish`
   distribution
   id("org.jetbrains.kotlin.jvm") version "1.3.72"
-  id("org.jlleitschuh.gradle.ktlint") version "9.3.0" apply false
-  id("org.jlleitschuh.gradle.ktlint-idea") version "9.3.0" apply true
-  id("com.github.johnrengelman.shadow") version "6.0.0" apply true
-  id("io.spring.dependency-management") version "1.0.9.RELEASE"
+  id("org.jlleitschuh.gradle.ktlint") version "9.3.0"
+  id("org.jlleitschuh.gradle.ktlint-idea") version "9.3.0"
+  id("com.github.johnrengelman.shadow") version "6.0.0"
   id("com.github.ben-manes.versions") version "0.29.0"
   id("me.qoomon.git-versioning") version "3.0.0"
   id("dev.north.fortyone.flatbuffers") version "0.1.0"
@@ -39,10 +39,6 @@ plugins {
 
 version = "0.0.0-SNAPSHOT"
 group = "dev.north.fortyone"
-
-apply(plugin = "io.spring.dependency-management")
-apply(from = "$rootDir/gradle/versions.gradle")
-apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
 repositories {
   jcenter()
@@ -57,33 +53,30 @@ dependencies {
   implementation(kotlin("stdlib"))
   implementation(kotlin("reflect"))
 
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:_")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:_")
 
-  implementation("com.google.flatbuffers:flatbuffers-java")
+  implementation("com.google.flatbuffers:flatbuffers-java:_")
 
-  implementation("org.hyperledger.besu.internal:besu")
-  implementation("org.hyperledger.besu.internal:core")
-  implementation("org.hyperledger.besu.internal:eth")
-  implementation("org.hyperledger.besu.internal:api")
-  implementation("org.hyperledger.besu.internal:config")
-  implementation("org.hyperledger.besu.internal:metrics-core")
-  implementation("org.hyperledger.besu.internal:kvstore")
-  implementation("org.hyperledger.besu.internal:plugins-rocksdb")
+  implementation("org.hyperledger.besu.internal:besu:_")
+  implementation("org.hyperledger.besu.internal:core:_")
+  implementation("org.hyperledger.besu.internal:eth:_")
+  implementation("org.hyperledger.besu.internal:api:_")
+  implementation("org.hyperledger.besu.internal:config:_")
+  implementation("org.hyperledger.besu.internal:metrics-core:_")
+  implementation("org.hyperledger.besu.internal:kvstore:_")
+  implementation("org.hyperledger.besu.internal:plugins-rocksdb:_")
 
-  implementation("org.apache.tuweni:tuweni-bytes")
-  implementation("org.apache.tuweni:tuweni-units")
+  implementation("info.picocli:picocli:_")
 
-  implementation("info.picocli:picocli")
+  implementation("org.koin:koin-core:_")
 
-  implementation("org.koin:koin-core")
+  implementation("org.apache.kafka:kafka-clients:_")
+  implementation("redis.clients:jedis:_")
 
-  implementation("org.apache.kafka:kafka-clients")
-  implementation("redis.clients:jedis")
+  runtimeOnly("org.apache.logging.log4j:log4j-core:_")
 
-  runtimeOnly("org.apache.logging.log4j:log4j-core")
-
-  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
+  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:_")
 }
 
 tasks {
@@ -91,6 +84,18 @@ tasks {
 
   jar {
     enabled = false
+  }
+
+  val distZip: Zip by container
+  distZip.apply {
+    doFirst { delete { fileTree(Pair("build/distributions", "*.zip")) } }
+  }
+
+  val distTar: Tar by container
+  distTar.apply {
+    doFirst { delete { fileTree(Pair("build/distributions", "*.tar.gz")) } }
+    compression = Compression.GZIP
+    archiveExtension.set("tar.gz")
   }
 
   withType<KotlinCompile>().all {
@@ -115,6 +120,28 @@ tasks {
     // Reject all non stable versions
     rejectVersionIf {
       isNonStable(candidate.version)
+    }
+  }
+
+  withType<ShadowJar> {
+    archiveBaseName.set("besu-storage-replication")
+    archiveVersion.set(project.version.toString())
+    archiveClassifier.set("")
+
+    minimize()
+
+    dependencies {
+      listOf(
+        "besu",
+        "core",
+        "eth",
+        "api",
+        "config",
+        "metrics-core"
+      ).forEach { dep ->
+        exclude(dependency("org.hyperledger.besu.internal:${dep}"))
+      }
+      exclude(dependency("info.picocli:picocli"))
     }
   }
 }
@@ -144,25 +171,13 @@ intellijRunGenerator {
   tasksDefinitionOutput.set(File(".idea/runConfigurations"))
 }
 
-val distZip: Zip by project.tasks
-distZip.apply {
-  doFirst { delete { fileTree(Pair("build/distributions", "*.zip")) } }
-}
-
-val distTar: Tar by project.tasks
-distTar.apply {
-  doFirst { delete { fileTree(Pair("build/distributions", "*.tar.gz")) } }
-  compression = Compression.GZIP
-  archiveExtension.set("tar.gz")
-}
-
 distributions {
   main {
     contents {
       from("LICENSE") { into("") }
       from("README.md") { into("") }
       from("CHANGELOG.md") { into("") }
-      from("ingestion/postgres/build/libs") { into("plugins") }
+      from("build/libs") { into("plugins") }
     }
   }
 }

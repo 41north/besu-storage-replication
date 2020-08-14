@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import de.fayard.dependencies.bootstrapRefreshVersionsAndDependencies
+
 pluginManagement {
 
   repositories {
@@ -22,3 +24,10 @@ pluginManagement {
     maven(url = "https://dl.bintray.com/gradle/gradle-plugins")
   }
 }
+
+buildscript {
+  repositories { gradlePluginPortal() }
+  dependencies.classpath("de.fayard:dependencies:0.5.7")
+}
+
+bootstrapRefreshVersionsAndDependencies()

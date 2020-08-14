@@ -18,7 +18,6 @@ package dev.north.fortyone.besu.services
 
 import dev.north.fortyone.besu.ext.besuConfiguration
 import dev.north.fortyone.besu.ext.metricsSystem
-import dev.north.fortyone.besu.ext.storageService
 import dev.north.fortyone.besu.replication.ReplicationBuffer
 import dev.north.fortyone.besu.replication.TransactionLog
 import dev.north.fortyone.besu.storage.ReplicationSegmentIdentifier

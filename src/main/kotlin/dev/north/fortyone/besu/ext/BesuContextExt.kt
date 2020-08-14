@@ -23,7 +23,6 @@ import org.hyperledger.besu.plugin.services.MetricsSystem
 import org.hyperledger.besu.plugin.services.PicoCLIOptions
 import org.hyperledger.besu.plugin.services.StorageService
 import org.hyperledger.besu.services.BesuPluginContextImpl
-import picocli.CommandLine
 import java.lang.IllegalStateException
 
 inline fun <reified T : Any> reflektField(entity: Any, fieldName: String): T {
@@ -54,10 +53,6 @@ fun BesuContext.cliOptions(): PicoCLIOptions =
   this
     .getService(PicoCLIOptions::class.java)
     .orElseThrow { IllegalStateException("Could not find PicoCLIOptions") }
-
-fun BesuContext.commandLine(): CommandLine =
-  // TODO: Review with BESU devs how we can improve obtaining this info without resorting to reflection
-  reflektField(this.cliOptions(), "commandLine")
 
 fun BesuContext.replicationManager(): ReplicationManager =
   this
